@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supply & Demand — Equipo C&I Cloud</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --bg2: #13161e;
+    --bg3: #1a1e28;
+    --border: #252a38;
+    --border2: #2e3548;
+    --text: #c8cedd;
+    --text2: #7a8299;
+    --text3: #4a5168;
+    --accent: #3b82f6;
+    --accent2: #1d4ed8;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.08);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.08);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.08);
+    --purple: #a855f7;
+    --purple-bg: rgba(168,85,247,0.08);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+  /* HEADER */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  header .logo { display: flex; align-items: center; gap: 10px; }
+  header .logo-icon {
+    width: 32px; height: 32px; background: var(--accent); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 600; color: #fff;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  header .subtitle { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 1px; }
+  header .actions { display: flex; gap: 8px; align-items: center; }
+  .last-update { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+
+  /* TABS */
+  nav.tabs {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; gap: 0;
+  }
+  nav.tabs button {
+    background: none; border: none; color: var(--text2);
+    padding: 12px 16px; font-size: 13px; font-family: var(--sans);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* CONTENT */
+  .content { padding: 24px; max-width: 1600px; margin: 0 auto; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* KPI ROW */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-card.blue::before { background: var(--accent); }
+  .kpi-card.purple::before { background: var(--purple); }
+  .kpi-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .kpi-value { font-size: 28px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.amber { color: var(--amber); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-value.blue { color: var(--accent); }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+
+  /* SECTION */
+  .section { margin-bottom: 28px; }
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title { font-size: 13px; font-weight: 600; letter-spacing: 0.02em; color: var(--text2); text-transform: uppercase; }
+  .section-actions { display: flex; gap: 8px; }
+
+  /* BUTTONS */
+  .btn {
+    background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+    padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: var(--sans);
+    cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--border); border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent2); }
+  .btn.danger { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: var(--red); color: #fff; }
+  .btn.small { padding: 4px 8px; font-size: 11px; }
+
+  /* TABLE */
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  table thead tr { background: var(--bg3); border-bottom: 1px solid var(--border); }
+  table th { padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text3); text-align: left; white-space: nowrap; }
+  table td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  table tr:last-child td { border-bottom: none; }
+  table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;
+    font-family: var(--mono); white-space: nowrap;
+  }
+  .badge.green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+  .badge.red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.2); }
+  .badge.blue { background: rgba(59,130,246,0.08); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); }
+  .badge.gray { background: var(--bg3); color: var(--text2); border: 1px solid var(--border2); }
+  .badge.purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
+
+  /* PROGRESS BAR */
+  .progress-wrap { display: flex; align-items: center; gap: 8px; }
+  .progress-bar { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; min-width: 60px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .fill-green { background: var(--green); }
+  .fill-amber { background: var(--amber); }
+  .fill-red { background: var(--red); }
+  .progress-label { font-family: var(--mono); font-size: 11px; color: var(--text2); min-width: 38px; text-align: right; }
+
+  /* SEARCH / FILTER */
+  .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  input[type=text], select {
+    background: var(--bg2); border: 1px solid var(--border2); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 13px; font-family: var(--sans);
+    outline: none; transition: border 0.15s;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  input[type=text] { min-width: 200px; }
+  select option { background: var(--bg2); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 200; align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2); border-radius: 10px;
+    padding: 24px; min-width: 420px; max-width: 560px; width: 100%;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 18px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-group input, .form-group select { width: 100%; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ALERT */
+  .alert {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px;
+  }
+  .alert.warning { background: var(--amber-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--amber); }
+  .alert.danger { background: var(--red-bg); border: 1px solid rgba(239,68,68,0.2); color: var(--red); }
+
+  /* PERSONA CARD (vista grid) */
+  .persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .persona-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; position: relative; cursor: default;
+    transition: border-color 0.15s;
+  }
+  .persona-card:hover { border-color: var(--border2); }
+  .persona-card.overload { border-left: 3px solid var(--red); }
+  .persona-card.warn { border-left: 3px solid var(--amber); }
+  .persona-card.ok { border-left: 3px solid var(--green); }
+  .persona-card.bench { border-left: 3px solid var(--text3); }
+  .persona-card.inactive { opacity: 0.45; border-left: 3px solid var(--text3); }
+  .pc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .pc-name { font-size: 13px; font-weight: 600; }
+  .pc-role { font-size: 11px; color: var(--text2); margin-top: 2px; font-family: var(--mono); }
+  .pc-projects { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .pc-btn-row { margin-top: 10px; display: flex; gap: 6px; }
+
+  /* Tooltip */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 4px); left: 50%;
+    transform: translateX(-50%); background: #1e2330; border: 1px solid var(--border2);
+    color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 11px;
+    white-space: nowrap; z-index: 300; pointer-events: none;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+    padding: 10px 16px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .filters { flex-direction: column; }
+    .modal { min-width: unset; margin: 16px; }
+  }
+  .empty-row td { text-align: center; color: var(--text3); padding: 28px; font-style: italic; }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot.green { background: var(--green); }
+  .dot.amber { background: var(--amber); }
+  .dot.red { background: var(--red); }
+  .dot.gray { background: var(--text3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">S/D</div>
+    <div>
+      <h1>Supply &amp; Demand — Equipo C&amp;I Cloud</h1>
+      <div class="subtitle" id="lastUpdateLabel">Actualizado: <span id="lastUpdateDate">—</span></div>
+    </div>
+  </div>
+  <div class="actions">
+    <span class="last-update" id="sharedFileLabel">Modo nube no conectado</span>
+    <span class="last-update" id="personCount"></span>
+    <button class="btn" onclick="reloadFromSupabase()">☁️ Recargar nube</button>
+    <button class="btn primary" onclick="saveToSupabase()">☁️ Guardar nube</button>
+    <button class="btn" onclick="exportJSON()">⬇ Exportar JSON</button>
+    <button class="btn" onclick="document.getElementById('importFile').click()">⬆ Importar JSON</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button onclick="showTab('personas',this)">Personas</button>
+  <button onclick="showTab('proyectos',this)">Proyectos</button>
+  <button onclick="showTab('asignaciones',this)">Asignaciones</button>
+</nav>
+
+<div class="content">
+
+  <!-- ============ DASHBOARD ============ -->
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div id="alertsRow"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="section">
+        <div class="section-header"><span class="section-title">🔴 Sobrecargados (&gt;100%)</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>% Asignado</th><th>Carga</th></tr></thead><tbody id="overloadTable"></tbody></table></div>
+      </div>
+      <div class="section">
+        <div class="section-header"><span class="section-title">⚪ Sin asignar / Bench</span></div>
+        <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>Seniority</th><th>Estado</th></tr></thead><tbody id="benchTable"></tbody></table></div>
+      </div>
+    </div>
+    <div class="section" style="margin-top:0">
+      <div class="section-header"><span class="section-title">Distribución de carga por persona</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>Sen.</th><th>FTE Disp.</th><th>FTE Asig.</th><th>Carga visual</th><th>Proyectos activos</th></tr></thead><tbody id="loadTable"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ============ PERSONAS ============ -->
+  <div id="tab-personas" class="tab-panel">
+    <div class="filters">
+      <input type="text" id="searchPersona" placeholder="Buscar persona..." oninput="renderPersonas()">
+      <select id="filterRol" onchange="renderPersonas()">
+        <option value="">Todos los roles</option>
+        <option>Arquitecto Cloud</option>
+        <option>Consultor Senior</option>
+        <option>Ingeniero Cloud</option>
+      </select>
+      <select id="filterSeniority" onchange="renderPersonas()">
+        <option value="">Todos los seniority</option>
+        <option>Senior</option>
+        <option>Mid</option>
+        <option>Junior</option>
+      </select>
+      <select id="filterDisp" onchange="renderPersonas()">
+        <option value="">Todos</option>
+        <option value="available">Con disponibilidad</option>
+        <option value="overload">Sobrecargados</option>
+        <option value="inactive">No disponibles</option>
+      </select>
+      <button class="btn primary" onclick="openAddPersona()">+ Añadir persona</button>
+    </div>
+    <div class="persona-grid" id="personaGrid"></div>
+  </div>
+
+  <!-- ============ PROYECTOS ============ -->
+  <div id="tab-proyectos" class="tab-panel">
+    <div class="filters">
+      <input type="text" id="searchProyecto" placeholder="Buscar proyecto o cliente..." oninput="renderProyectos()">
+      <select id="filterEstado" onchange="renderProyectos()">
+        <option value="">Todos los estados</option>
+        <option value="Activo">Activos</option>
+        <option value="Cerrado">Cerrados</option>
+      </select>
+      <button class="btn primary" onclick="openAddProyecto()">+ Añadir proyecto</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Proyecto</th><th>Cliente</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>FTEs asig.</th><th>Obs.</th><th>Acciones</th></tr></thead>
+        <tbody id="proyectosTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ ASIGNACIONES ============ -->
+  <div id="tab-asignaciones" class="tab-panel">
+    <div class="filters">
+      <input type="text" id="searchAsig" placeholder="Buscar persona o proyecto..." oninput="renderAsignaciones()">
+      <select id="filterPersonaAsig" onchange="renderAsignaciones()"><option value="">Todas las personas</option></select>
+      <select id="filterProyectoAsig" onchange="renderAsignaciones()"><option value="">Todos los proyectos</option></select>
+      <button class="btn primary" onclick="openAddAsignacion()">+ Añadir asignación</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Persona</th><th>Proyecto</th><th>Cliente</th><th>Rol en proyecto</th><th>% Dedicación</th><th>Desde</th><th>Hasta</th><th>Acciones</th></tr></thead>
+        <tbody id="asignacionesTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PERSONA -->
+<div class="modal-overlay" id="modalPersona">
+  <div class="modal">
+    <h3 id="modalPersonaTitle">Añadir persona</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre completo *</label><input type="text" id="pNombre"></div>
+      <div class="form-group"><label>Rol *</label>
+        <select id="pRol">
+          <option>Arquitecto Cloud</option><option>Consultor Senior</option><option>Ingeniero Cloud</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Seniority</label>
+        <select id="pSeniority"><option>Senior</option><option>Mid</option><option>Junior</option></select>
+      </div>
+      <div class="form-group"><label>FTE Disponible (0 o 1)</label>
+        <select id="pFTE"><option value="1">1 — Disponible</option><option value="0">0 — No disponible</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Observaciones</label><input type="text" id="pObs" placeholder="Ej: baja, subcontrata, etc."></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalPersona')">Cancelar</button>
+      <button class="btn primary" onclick="savePersona()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROYECTO -->
+<div class="modal-overlay" id="modalProyecto">
+  <div class="modal">
+    <h3 id="modalProyectoTitle">Añadir proyecto</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Nombre proyecto *</label><input type="text" id="prNombre"></div>
+      <div class="form-group"><label>Cliente *</label><input type="text" id="prCliente"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fecha inicio</label><input type="date" id="prInicio"></div>
+      <div class="form-group"><label>Fecha fin</label><input type="date" id="prFin"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Estado</label>
+        <select id="prEstado"><option>Activo</option><option>Cerrado</option><option>Pipeline</option></select>
+      </div>
+      <div class="form-group"><label>Observaciones</label><input type="text" id="prObs"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalProyecto')">Cancelar</button>
+      <button class="btn primary" onclick="saveProyecto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ASIGNACION -->
+<div class="modal-overlay" id="modalAsignacion">
+  <div class="modal">
+    <h3 id="modalAsigTitle">Añadir asignación</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Persona *</label><select id="aNombre"></select></div>
+      <div class="form-group"><label>Proyecto *</label><select id="aProyecto" onchange="syncAsignacionDatesFromProject()"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>% Dedicación (0–1)</label><input type="number" id="aDed" min="0" max="2" step="0.1" value="1"></div>
+      <div class="form-group"><label>Rol en proyecto</label><input type="text" id="aRol" placeholder="Ej: Arquitecto, SRE..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Desde</label><input type="date" id="aDesde"></div>
+      <div class="form-group"><label>Hasta</label><input type="date" id="aHasta"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalAsignacion')">Cancelar</button>
+      <button class="btn primary" onclick="saveAsignacion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "PEGA_AQUI_TU_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
+// DATA INITIAL STATE (from Excel)
+// ============================================================
+const INITIAL_DATA = {
+  lastUpdate: new Date().toISOString(),
+  personas: [
+    {id:'p1', nombre:'Alberto Lopez', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p2', nombre:'Alvaro Exposito', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p3', nombre:'Abel Carvajal', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p4', nombre:'Antonio Fernandez', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p5', nombre:'Jose Antonio Silva', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p6', nombre:'Luis Adan', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p7', nombre:'Edgar Castaños Gil', rol:'Arquitecto Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p8', nombre:'Victor Santos', rol:'Consultor Senior', seniority:'Senior', fte:1, obs:''},
+    {id:'p9', nombre:'Fernando Lazaro', rol:'Consultor Senior', seniority:'Senior', fte:1, obs:''},
+    {id:'p10', nombre:'Angel Garrido', rol:'Consultor Senior', seniority:'Senior', fte:1, obs:''},
+    {id:'p11', nombre:'Sergio Huerta', rol:'Consultor Senior', seniority:'Senior', fte:1, obs:''},
+    {id:'p12', nombre:'Jose Naveiras', rol:'Consultor Senior', seniority:'Senior', fte:0, obs:'No disponible'},
+    {id:'p13', nombre:'Enzo Arroyo', rol:'Ingeniero Cloud', seniority:'Senior', fte:0, obs:'No disponible'},
+    {id:'p14', nombre:'Noelia Barrera', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p15', nombre:'Alberto Gonzalez', rol:'Ingeniero Cloud', seniority:'Mid', fte:0, obs:'No disponible'},
+    {id:'p16', nombre:'Nuria Garcia', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p17', nombre:'Juan Cintas', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p18', nombre:'Eduardo Peinado', rol:'Ingeniero Cloud', seniority:'Mid', fte:1, obs:''},
+    {id:'p19', nombre:'Sergio Sanchez', rol:'Ingeniero Cloud', seniority:'Mid', fte:1, obs:''},
+    {id:'p20', nombre:'Javier Sotillos', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p21', nombre:'Walberto Perez', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p22', nombre:'Carlos Martin', rol:'Ingeniero Cloud', seniority:'Mid', fte:1, obs:''},
+    {id:'p23', nombre:'Ricardo Araujo', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p24', nombre:'Manuel Gutierrez', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p25', nombre:'Luis Campoy', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p26', nombre:'Obaida', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p27', nombre:'Guillermo Arrollo', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p28', nombre:'Ismael Martinez Smaoui', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p29', nombre:'Cristina Garcia Calvo', rol:'Ingeniero Cloud', seniority:'Mid', fte:1, obs:''},
+    {id:'p30', nombre:'Fernando Valero Velasco', rol:'Ingeniero Cloud', seniority:'Mid', fte:1, obs:''},
+    {id:'p31', nombre:'Pablo Delgado Seijo', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p32', nombre:'Angela Hidalgo', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p33', nombre:'Alexander de Sousa', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p34', nombre:'Victor Estevez', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p35', nombre:'Fernando Cordeiro', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p36', nombre:'Alejandro Casanova', rol:'Ingeniero Cloud', seniority:'Senior', fte:1, obs:''},
+    {id:'p37', nombre:'Angel Grela', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p38', nombre:'Abel Rodriguez', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p39', nombre:'Alejandro Lopez', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p40', nombre:'Lidia Katarzyna Stefanska', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+    {id:'p41', nombre:'Iván Marín', rol:'Ingeniero Cloud', seniority:'Junior', fte:1, obs:''},
+  ],
+  proyectos: [
+    {id:'pr1', nombre:'Preventa', cliente:'N/A', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr2', nombre:'Cloud Architect', cliente:'Alsa', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr3', nombre:'Oficina del Dato', cliente:'Correos', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr4', nombre:'Oficina Cloud', cliente:'CTTI', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr5', nombre:'Oficina de Arquitectura', cliente:'Correos', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr6', nombre:'Centro Competencia', cliente:'AENA', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr7', nombre:'OT Wizink', cliente:'Wizink', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr8', nombre:'OT Admiral', cliente:'Admiral', inicio:'2025-03-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr9', nombre:'OT IAM', cliente:'IAM', inicio:'2025-01-01', fin:'2025-12-30', estado:'Cerrado', obs:''},
+    {id:'pr10', nombre:'Landing Zone MD', cliente:'Madrid Digital', inicio:'2024-11-15', fin:'2025-05-30', estado:'Cerrado', obs:''},
+    {id:'pr11', nombre:'Landing Zone AEC', cliente:'AE Ciberseguridad', inicio:'2025-04-30', fin:'2025-05-23', estado:'Cerrado', obs:''},
+    {id:'pr12', nombre:'Landing Zone Veridas', cliente:'Veridas', inicio:'2025-05-05', fin:'2025-07-30', estado:'Cerrado', obs:''},
+    {id:'pr13', nombre:'Landing Zone AXA', cliente:'AXA', inicio:'2025-05-01', fin:'2025-06-30', estado:'Activo', obs:'Proyecto Dx'},
+    {id:'pr14', nombre:'OT EMT', cliente:'EMT', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr15', nombre:'Landing Zone Ilunion', cliente:'Ilunion', inicio:'2024-10-08', fin:'2025-06-30', estado:'Cerrado', obs:''},
+    {id:'pr16', nombre:'Migración Azure', cliente:'Portobello', inicio:'2025-04-03', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr17', nombre:'Migración Lólivier', cliente:'Admiral', inicio:'2025-03-04', fin:'2025-07-31', estado:'Activo', obs:''},
+    {id:'pr18', nombre:'Migración NetApp', cliente:'Alantra', inicio:'2024-01-01', fin:'2025-05-05', estado:'Cerrado', obs:''},
+    {id:'pr19', nombre:'Landing Zone AMIR', cliente:'AMIR', inicio:'2025-01-15', fin:'2025-03-31', estado:'Cerrado', obs:''},
+    {id:'pr20', nombre:'Landing Zone Activobank', cliente:'Sabadell', inicio:'2025-04-01', fin:'2025-12-31', estado:'Activo', obs:'Proyecto Dx'},
+    {id:'pr21', nombre:'Gestión Permisos AWS', cliente:'Mobilize', inicio:'2025-05-01', fin:'2025-06-30', estado:'Activo', obs:'Proyecto Dx'},
+    {id:'pr22', nombre:'Codificación WAF', cliente:'Mapfre', inicio:'2025-01-28', fin:'2025-05-30', estado:'Activo', obs:'Proyecto Seguridad'},
+    {id:'pr23', nombre:'Proyectos', cliente:'Serveo', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr24', nombre:'Gestión CI/CD', cliente:'Serveo', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr25', nombre:'Landing Zone Moeve', cliente:'Moeve', inicio:'2025-05-23', fin:'2025-06-30', estado:'Cerrado', obs:'Proyecto Dx'},
+    {id:'pr26', nombre:'Landing Zone AEGON', cliente:'AEGON', inicio:'2025-05-23', fin:'2025-06-30', estado:'Cerrado', obs:'Proyecto DX'},
+    {id:'pr27', nombre:'Ad-hocs', cliente:'Evolutio', inicio:'2025-01-01', fin:'2025-12-30', estado:'Activo', obs:''},
+    {id:'pr28', nombre:'OT Tragsa', cliente:'Tragsa', inicio:'2025-11-03', fin:'2026-06-02', estado:'Activo', obs:''},
+    {id:'pr29', nombre:'OT ASISA', cliente:'ASISA', inicio:'2025-01-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr30', nombre:'Migración Presence AMA', cliente:'AMA', inicio:'2025-05-25', fin:'2025-06-30', estado:'Cerrado', obs:''},
+    {id:'pr31', nombre:'Landing Zone CEX', cliente:'Correos Express', inicio:'2025-06-04', fin:'2025-06-30', estado:'Activo', obs:''},
+    {id:'pr32', nombre:'Federación dominio PRECDTI', cliente:'CDTI', inicio:'2025-05-04', fin:'2025-06-30', estado:'Cerrado', obs:''},
+    {id:'pr33', nombre:'Perfil Devops', cliente:'Servicio Canario de Salud', inicio:'2025-09-22', fin:'2026-05-16', estado:'Activo', obs:''},
+    {id:'pr34', nombre:'Servicios Profesionales GCP', cliente:'CAM', inicio:'2025-06-06', fin:'2026-06-06', estado:'Activo', obs:''},
+    {id:'pr35', nombre:'Evolutivos OT DX', cliente:'Bankinter', inicio:'2025-06-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr36', nombre:'LZ GCP AWS Azure OCI', cliente:'AEMET', inicio:'2025-06-09', fin:'2026-12-31', estado:'Activo', obs:''},
+    {id:'pr37', nombre:'Maquina Virtual FW', cliente:'AMIR', inicio:'2025-06-05', fin:'2025-06-30', estado:'Cerrado', obs:''},
+    {id:'pr38', nombre:'Proyecto Ansible', cliente:'Correos', inicio:'2025-06-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr39', nombre:'Perfil Devops GIIS', cliente:'GIIS', inicio:'2025-09-01', fin:'2026-12-31', estado:'Activo', obs:''},
+    {id:'pr40', nombre:'POWER BI CEX', cliente:'Correos Express', inicio:'2025-09-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr41', nombre:'PROYECTO CDN', cliente:'AEMET', inicio:'2025-06-01', fin:'2025-08-14', estado:'Cerrado', obs:''},
+    {id:'pr42', nombre:'OT ONTIME', cliente:'ONTIME', inicio:'2025-09-01', fin:'2026-12-31', estado:'Activo', obs:''},
+    {id:'pr43', nombre:'Unificacion de Tenants', cliente:'AMIR', inicio:'2025-09-20', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr44', nombre:'VM italia', cliente:'AMIR', inicio:'2025-09-11', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr45', nombre:'Proyecto puerta internacional', cliente:'Correos Express', inicio:'2025-09-22', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr46', nombre:'SSPP Zabbix/Grafana AWS', cliente:'Alantra', inicio:'2025-09-22', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr47', nombre:'Assesment Azure ARC', cliente:'Prisa', inicio:'2025-10-20', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr48', nombre:'Licencias M365', cliente:'Alsea', inicio:'2025-10-01', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr49', nombre:'Despliegue AKS', cliente:'Logista', inicio:'2025-11-17', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr50', nombre:'Cashdiplo Consultoria OCI', cliente:'Cashdiplo', inicio:'2025-11-14', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr51', nombre:'Google certification', cliente:'Evolutio', inicio:'2025-05-22', fin:'2025-12-31', estado:'Activo', obs:''},
+    {id:'pr52', nombre:'Proyecto Ansible CTTI', cliente:'CTTI', inicio:'2025-11-17', fin:'2025-12-31', estado:'Activo', obs:''},
+  ],
+  asignaciones: [
+    {id:'a1', persona:'Abel Carvajal', proyecto:'Oficina Cloud', rol:'SRE', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a2', persona:'Abel Rodriguez', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a3', persona:'Alejandro Casanova', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a4', persona:'Alejandro Lopez', proyecto:'OT Tragsa', rol:'', ded:1, desde:'2025-11-03', hasta:'2026-06-02'},
+    {id:'a5', persona:'Alexander de Sousa', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a6', persona:'Alvaro Exposito', proyecto:'OT Wizink', rol:'Arquitecto IT', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a7', persona:'Angel Garrido', proyecto:'Centro Competencia', rol:'Consultor Senior', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a8', persona:'Angel Grela', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a9', persona:'Angela Hidalgo', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a10', persona:'Antonio Fernandez', proyecto:'OT Admiral', rol:'', ded:1, desde:'2025-03-01', hasta:'2026-01-20'},
+    {id:'a11', persona:'Carlos Martin', proyecto:'Gestión CI/CD', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a12', persona:'Cristina Garcia Calvo', proyecto:'Oficina Cloud', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a13', persona:'Edgar Castaños Gil', proyecto:'Oficina Cloud', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a14', persona:'Eduardo Peinado', proyecto:'OT ASISA', rol:'', ded:0.5, desde:'2025-01-01', hasta:'2025-12-31'},
+    {id:'a15', persona:'Eduardo Peinado', proyecto:'Gestión Permisos AWS', rol:'', ded:0.1, desde:'2025-05-01', hasta:'2025-06-30'},
+    {id:'a16', persona:'Eduardo Peinado', proyecto:'Proyecto puerta internacional', rol:'', ded:0.5, desde:'2025-09-22', hasta:'2025-12-31'},
+    {id:'a17', persona:'Fernando Cordeiro', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a18', persona:'Fernando Lazaro', proyecto:'Oficina del Dato', rol:'', ded:0.8, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a19', persona:'Fernando Lazaro', proyecto:'Preventa', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a20', persona:'Fernando Valero Velasco', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a21', persona:'Guillermo Arrollo', proyecto:'Oficina del Dato', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a22', persona:'Ismael Martinez Smaoui', proyecto:'Perfil Devops', rol:'', ded:1, desde:'2025-09-22', hasta:'2026-05-16'},
+    {id:'a23', persona:'Iván Marín', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a24', persona:'Javier Sotillos', proyecto:'Landing Zone AXA', rol:'', ded:0.1, desde:'2025-05-01', hasta:'2025-06-30'},
+    {id:'a25', persona:'Javier Sotillos', proyecto:'Oficina Cloud', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a26', persona:'Javier Sotillos', proyecto:'Landing Zone AEGON', rol:'', ded:0.1, desde:'2025-05-23', hasta:'2025-06-30'},
+    {id:'a27', persona:'Javier Sotillos', proyecto:'Landing Zone CEX', rol:'', ded:1, desde:'2025-06-04', hasta:'2025-06-30'},
+    {id:'a28', persona:'Javier Sotillos', proyecto:'Landing Zone Activobank', rol:'', ded:0.1, desde:'2025-04-01', hasta:'2025-12-31'},
+    {id:'a29', persona:'Javier Sotillos', proyecto:'Proyecto puerta internacional', rol:'', ded:0.5, desde:'2025-09-22', hasta:'2025-12-31'},
+    {id:'a30', persona:'Javier Sotillos', proyecto:'Google certification', rol:'', ded:0.3, desde:'2025-05-22', hasta:'2025-12-31'},
+    {id:'a31', persona:'Jose Antonio Silva', proyecto:'Landing Zone MD', rol:'', ded:0.4, desde:'2024-11-15', hasta:'2025-05-30'},
+    {id:'a32', persona:'Jose Antonio Silva', proyecto:'Landing Zone AXA', rol:'', ded:0.1, desde:'2025-05-01', hasta:'2025-06-30'},
+    {id:'a33', persona:'Jose Antonio Silva', proyecto:'LZ GCP AWS Azure OCI', rol:'', ded:0.1, desde:'2025-06-09', hasta:'2026-12-31'},
+    {id:'a34', persona:'Jose Antonio Silva', proyecto:'OT ONTIME', rol:'', ded:0.25, desde:'2025-09-01', hasta:'2026-12-31'},
+    {id:'a35', persona:'Jose Antonio Silva', proyecto:'Cashdiplo Consultoria OCI', rol:'', ded:0.3, desde:'2025-11-14', hasta:'2025-12-31'},
+    {id:'a36', persona:'Jose Antonio Silva', proyecto:'Google certification', rol:'', ded:0.2, desde:'2025-05-22', hasta:'2025-12-31'},
+    {id:'a37', persona:'Jose Naveiras', proyecto:'Oficina del Dato', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a38', persona:'Jose Naveiras', proyecto:'Preventa', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a39', persona:'Juan Cintas', proyecto:'Centro Competencia', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a40', persona:'Juan Cintas', proyecto:'Oficina Cloud', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a41', persona:'Juan Cintas', proyecto:'VM italia', rol:'', ded:0.1, desde:'2025-09-11', hasta:'2025-12-31'},
+    {id:'a42', persona:'Lidia Katarzyna Stefanska', proyecto:'Perfil Devops GIIS', rol:'', ded:1, desde:'2025-09-01', hasta:'2026-12-31'},
+    {id:'a43', persona:'Luis Adan', proyecto:'OT EMT', rol:'', ded:0.3, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a44', persona:'Luis Adan', proyecto:'Migración Azure', rol:'', ded:0.5, desde:'2025-04-03', hasta:'2025-12-31'},
+    {id:'a45', persona:'Luis Adan', proyecto:'Assesment Azure ARC', rol:'', ded:0.5, desde:'2025-10-20', hasta:'2025-12-31'},
+    {id:'a46', persona:'Luis Adan', proyecto:'Despliegue AKS', rol:'', ded:0.3, desde:'2025-11-17', hasta:'2025-12-31'},
+    {id:'a47', persona:'Luis Adan', proyecto:'Preventa', rol:'', ded:0.4, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a48', persona:'Luis Campoy', proyecto:'Centro Competencia', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a49', persona:'Manuel Gutierrez', proyecto:'Oficina de Arquitectura', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a50', persona:'Noelia Barrera', proyecto:'OT Admiral', rol:'', ded:1, desde:'2025-03-01', hasta:'2025-12-31'},
+    {id:'a51', persona:'Noelia Barrera', proyecto:'Proyecto puerta internacional', rol:'', ded:0.5, desde:'2025-09-22', hasta:'2025-12-31'},
+    {id:'a52', persona:'Nuria Garcia', proyecto:'Centro Competencia', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a53', persona:'Pablo Delgado Seijo', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a54', persona:'Ricardo Araujo', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a55', persona:'Sergio Huerta', proyecto:'Oficina del Dato', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a56', persona:'Sergio Huerta', proyecto:'Preventa', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a57', persona:'Sergio Sanchez', proyecto:'Codificación WAF', rol:'', ded:0.2, desde:'2025-01-28', hasta:'2025-05-30'},
+    {id:'a58', persona:'Sergio Sanchez', proyecto:'OT Admiral', rol:'', ded:0.4, desde:'2025-03-01', hasta:'2025-12-31'},
+    {id:'a59', persona:'Sergio Sanchez', proyecto:'Proyecto Ansible', rol:'', ded:1, desde:'2025-06-01', hasta:'2025-12-31'},
+    {id:'a60', persona:'Sergio Sanchez', proyecto:'Evolutivos OT DX', rol:'', ded:0.2, desde:'2025-06-01', hasta:'2025-12-31'},
+    {id:'a61', persona:'Sergio Sanchez', proyecto:'Proyecto Ansible CTTI', rol:'', ded:1, desde:'2025-11-17', hasta:'2025-12-31'},
+    {id:'a62', persona:'Victor Estevez', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a63', persona:'Victor Santos', proyecto:'Preventa', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a64', persona:'Victor Santos', proyecto:'Cloud Architect', rol:'', ded:0.2, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a65', persona:'Victor Santos', proyecto:'OT Admiral', rol:'', ded:0.1, desde:'2025-03-01', hasta:'2025-12-31'},
+    {id:'a66', persona:'Victor Santos', proyecto:'LZ GCP AWS Azure OCI', rol:'', ded:0.5, desde:'2025-06-09', hasta:'2026-12-31'},
+    {id:'a67', persona:'Walberto Perez', proyecto:'Centro Competencia', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
+    {id:'a68', persona:'Alberto Lopez', proyecto:'OT ASISA', rol:'Consultor Senior', ded:0, desde:'2025-01-01', hasta:'2025-12-31'},
+  ]
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let state = loadState();
+let editingPersonaId = null;
+let editingProyectoId = null;
+let editingAsigId = null;
+let selectedPersonaForAsignacion = null;
+let isSupabaseLoaded = false;
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('sd_cloud_v2');
+    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(INITIAL_DATA));
+  } catch(e) {
+    return JSON.parse(JSON.stringify(INITIAL_DATA));
+  }
+}
+function saveState() {
+  state.lastUpdate = new Date().toISOString();
+  localStorage.setItem('sd_cloud_v2', JSON.stringify(state));
+  updateLastUpdateLabel();
+}
+
+function updateSharedFileLabel() {
+  const el = document.getElementById('sharedFileLabel');
+  if (!el) return;
+  if (SUPABASE_URL.includes('PEGA_AQUI') || SUPABASE_ANON_KEY.includes('PEGA_AQUI')) {
+    el.textContent = 'Configura Supabase';
+    return;
+  }
+  el.textContent = isSupabaseLoaded ? 'Datos: Supabase' : 'Modo nube pendiente';
+}
+
+function updateLastUpdateLabel() {
+  const d = new Date(state.lastUpdate);
+  document.getElementById('lastUpdateDate').textContent = d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('personCount').textContent = `${state.personas.length} personas · ${state.proyectos.filter(p=>p.estado==='Activo').length} proyectos activos`;
+  updateSharedFileLabel();
+}
+
+async function loadStateFromSupabase(showMsg = false) {
+  if (SUPABASE_URL.includes('PEGA_AQUI') || SUPABASE_ANON_KEY.includes('PEGA_AQUI')) {
+    updateSharedFileLabel();
+    return;
+  }
+
+  const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: asignaciones, error: e3 }] = await Promise.all([
+    supabaseClient.from('personas').select('*').order('nombre'),
+    supabaseClient.from('proyectos').select('*').order('nombre'),
+    supabaseClient.from('asignaciones').select('*').order('id')
+  ]);
+
+  if (e1 || e2 || e3) {
+    console.error('Supabase load error', e1 || e2 || e3);
+    alert('Error cargando desde Supabase. Revisa URL, key, tablas y policies.');
+    return;
+  }
+
+  const personasById = Object.fromEntries((personas || []).map(p => [p.id, p]));
+  const proyectosById = Object.fromEntries((proyectos || []).map(p => [p.id, p]));
+
+  state = {
+    lastUpdate: new Date().toISOString(),
+    personas: (personas || []).map(p => ({
+      id: p.id, nombre: p.nombre, rol: p.rol, seniority: p.seniority, fte: Number(p.fte || 0), obs: p.obs || ''
+    })),
+    proyectos: (proyectos || []).map(p => ({
+      id: p.id, nombre: p.nombre, cliente: p.cliente || '', inicio: p.inicio || '', fin: p.fin || '', estado: p.estado || 'Activo', obs: p.obs || ''
+    })),
+    asignaciones: (asignaciones || []).map(a => ({
+      id: a.id,
+      persona: personasById[a.persona_id]?.nombre || '',
+      proyecto: proyectosById[a.proyecto_id]?.nombre || '',
+      rol: a.rol || '',
+      ded: Number(a.ded || 0),
+      desde: a.desde || '',
+      hasta: a.hasta || ''
+    })).filter(a => a.persona && a.proyecto)
+  };
+
+  isSupabaseLoaded = true;
+  saveState();
+  renderAll();
+  if (showMsg) showToast('Datos recargados desde Supabase ✓');
+}
+
+async function reloadFromSupabase() {
+  await loadStateFromSupabase(true);
+}
+
+async function saveToSupabase() {
+  if (SUPABASE_URL.includes('PEGA_AQUI') || SUPABASE_ANON_KEY.includes('PEGA_AQUI')) {
+    alert('Primero configura SUPABASE_URL y SUPABASE_ANON_KEY en el HTML.');
+    return;
+  }
+
+  try {
+    const personasRows = state.personas.map(p => ({
+      id: p.id, nombre: p.nombre, rol: p.rol, seniority: p.seniority, fte: Number(p.fte || 0), obs: p.obs || ''
+    }));
+
+    const proyectosRows = state.proyectos.map(p => ({
+      id: p.id, nombre: p.nombre, cliente: p.cliente || '', inicio: p.inicio || null, fin: p.fin || null, estado: p.estado || 'Activo', obs: p.obs || ''
+    }));
+
+    const personaIdByName = Object.fromEntries(state.personas.map(p => [p.nombre, p.id]));
+    const proyectoIdByName = Object.fromEntries(state.proyectos.map(p => [p.nombre, p.id]));
+
+    const asignacionesRows = state.asignaciones.map(a => ({
+      id: a.id,
+      persona_id: personaIdByName[a.persona],
+      proyecto_id: proyectoIdByName[a.proyecto],
+      rol: a.rol || '',
+      ded: Number(a.ded || 0),
+      desde: a.desde || null,
+      hasta: a.hasta || null
+    })).filter(a => a.persona_id && a.proyecto_id);
+
+    const personaIds = personasRows.map(x => x.id);
+    const proyectoIds = proyectosRows.map(x => x.id);
+    const asignacionIds = asignacionesRows.map(x => x.id);
+
+    let res;
+    res = await supabaseClient.from('personas').upsert(personasRows, { onConflict: 'id' });
+    if (res.error) throw res.error;
+    if (personaIds.length) {
+      res = await supabaseClient.from('personas').delete().not('id', 'in', '(' + personaIds.map(v => `"${v}"`).join(',') + ')');
+      if (res.error) throw res.error;
+    }
+
+    res = await supabaseClient.from('proyectos').upsert(proyectosRows, { onConflict: 'id' });
+    if (res.error) throw res.error;
+    if (proyectoIds.length) {
+      res = await supabaseClient.from('proyectos').delete().not('id', 'in', '(' + proyectoIds.map(v => `"${v}"`).join(',') + ')');
+      if (res.error) throw res.error;
+    }
+
+    res = await supabaseClient.from('asignaciones').upsert(asignacionesRows, { onConflict: 'id' });
+    if (res.error) throw res.error;
+    if (asignacionIds.length) {
+      res = await supabaseClient.from('asignaciones').delete().not('id', 'in', '(' + asignacionIds.map(v => `"${v}"`).join(',') + ')');
+      if (res.error) throw res.error;
+    } else {
+      res = await supabaseClient.from('asignaciones').delete().not('id', 'is', null);
+      if (res.error) throw res.error;
+    }
+
+    isSupabaseLoaded = true;
+    saveState();
+    updateSharedFileLabel();
+    showToast('Guardado en Supabase ✓');
+  } catch (e) {
+    console.error('Supabase save error', e);
+    alert('Error guardando en Supabase: ' + (e.message || e));
+  }
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function uid() { return 'id_' + Math.random().toString(36).slice(2,10); }
+
+function getFTEAsignado(nombre) {
+  return state.asignaciones.filter(a => a.persona === nombre).reduce((s,a) => s + (parseFloat(a.ded)||0), 0);
+}
+
+function getProyectosPersona(nombre) {
+  return state.asignaciones.filter(a => a.persona === nombre && parseFloat(a.ded) > 0).map(a => a.proyecto);
+}
+
+function getFTEsProyecto(nombreProy) {
+  return state.asignaciones.filter(a => a.proyecto === nombreProy).reduce((s,a) => s + (parseFloat(a.ded)||0), 0);
+}
+
+function cargaClass(fte_disp, fte_asig) {
+  if (fte_disp === 0) return 'inactive';
+  const ratio = fte_asig / fte_disp;
+  if (fte_asig === 0) return 'bench';
+  if (ratio > 1.05) return 'overload';
+  if (ratio > 0.79) return 'ok';
+  return 'warn';
+}
+
+function cargaBadge(fte_disp, fte_asig) {
+  if (fte_disp === 0) return '<span class="badge gray">No disp.</span>';
+  const ratio = fte_asig / fte_disp;
+  const pct = Math.round(ratio * 100);
+  if (fte_asig === 0) return '<span class="badge gray">Bench</span>';
+  if (ratio > 1.05) return `<span class="badge red">⚠ ${pct}%</span>`;
+  if (ratio > 0.79) return `<span class="badge green">${pct}%</span>`;
+  return `<span class="badge amber">${pct}%</span>`;
+}
+
+function progressBar(ratio) {
+  const pct = Math.min(Math.round(ratio * 100), 200);
+  const fill = ratio > 1.05 ? 'fill-red' : ratio > 0.79 ? 'fill-green' : 'fill-amber';
+  const barPct = Math.min(pct, 100);
+  return `<div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill ${fill}" style="width:${barPct}%"></div></div>
+    <span class="progress-label">${pct}%</span>
+  </div>`;
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  try { return new Date(s).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'}); } catch(e) { return s; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const personas = state.personas;
+  const total = personas.length;
+  const disponibles = personas.filter(p => p.fte > 0).length;
+  
+  let overloaded = [], bench = [], ok = 0;
+  personas.forEach(p => {
+    const asig = getFTEAsignado(p.nombre);
+    if (p.fte === 0) return;
+    if (asig === 0) bench.push(p);
+    else if (asig / p.fte > 1.05) overloaded.push({p, asig});
+    else ok++;
+  });
+
+  const activosProy = state.proyectos.filter(p => p.estado === 'Activo').length;
+
+  // KPIs
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-label">Total personas</div><div class="kpi-value blue">${total}</div><div class="kpi-sub">${disponibles} disponibles</div></div>
+    <div class="kpi-card green"><div class="kpi-label">OK / Asignados</div><div class="kpi-value green">${ok}</div><div class="kpi-sub">Carga normal</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">Bench / Infra-asig.</div><div class="kpi-value amber">${bench.length}</div><div class="kpi-sub">Disponibles sin proyecto</div></div>
+    <div class="kpi-card red"><div class="kpi-label">Sobrecargados</div><div class="kpi-value red">${overloaded.length}</div><div class="kpi-sub">&gt;100% asignación</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Proyectos activos</div><div class="kpi-value" style="color:var(--purple)">${activosProy}</div><div class="kpi-sub">${state.proyectos.filter(p=>p.estado==='Cerrado').length} cerrados</div></div>
+  `;
+
+  // Alerts
+  let alerts = '';
+  if (overloaded.length) alerts += `<div class="alert danger">⚠ ${overloaded.length} personas con más del 100% de asignación. Revisar urgente.</div>`;
+  if (bench.length) alerts += `<div class="alert warning">ℹ ${bench.length} personas disponibles sin proyecto asignado (bench).</div>`;
+  document.getElementById('alertsRow').innerHTML = alerts;
+
+  // Overload table
+  const ot = document.getElementById('overloadTable');
+  if (overloaded.length === 0) {
+    ot.innerHTML = '<tr class="empty-row"><td colspan="4">Sin sobrecarga detectada ✓</td></tr>';
+  } else {
+    ot.innerHTML = overloaded.sort((a,b) => b.asig - a.asig).map(({p, asig}) => `
+      <tr>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="badge gray">${p.rol}</span></td>
+        <td>${progressBar(asig / p.fte)}</td>
+        <td>${cargaBadge(p.fte, asig)}</td>
+      </tr>`).join('');
+  }
+
+  // Bench table
+  const bt = document.getElementById('benchTable');
+  if (bench.length === 0) {
+    bt.innerHTML = '<tr class="empty-row"><td colspan="4">Sin bench ✓</td></tr>';
+  } else {
+    bt.innerHTML = bench.map(p => `
+      <tr>
+        <td><strong>${p.nombre}</strong></td>
+        <td><span class="badge gray">${p.rol}</span></td>
+        <td><span class="badge ${p.seniority==='Senior'?'blue':p.seniority==='Mid'?'amber':'gray'}">${p.seniority}</span></td>
+        <td><span class="badge gray">Sin asignar</span></td>
+      </tr>`).join('');
+  }
+
+  // Load table
+  const lt = document.getElementById('loadTable');
+  lt.innerHTML = personas.map(p => {
+    const asig = getFTEAsignado(p.nombre);
+    const proyects = getProyectosPersona(p.nombre);
+    const ratio = p.fte > 0 ? asig / p.fte : 0;
+    return `<tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td><span class="badge gray" style="font-size:10px">${p.rol.replace('Arquitecto','Arq.').replace('Consultor','Cons.').replace('Ingeniero','Ing.')}</span></td>
+      <td><span class="badge ${p.seniority==='Senior'?'blue':p.seniority==='Mid'?'amber':'gray'}" style="font-size:10px">${p.seniority}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${p.fte}</td>
+      <td style="font-family:var(--mono);font-size:12px">${asig.toFixed(2)}</td>
+      <td style="min-width:120px">${p.fte > 0 ? progressBar(ratio) : '<span class="badge gray" style="font-size:10px">No disp.</span>'}</td>
+      <td style="font-size:11px;max-width:200px">${proyects.slice(0,3).map(pr=>`<span class="badge gray" style="font-size:10px;margin:1px">${pr}</span>`).join('')}${proyects.length>3?`<span style="color:var(--text3);font-size:10px"> +${proyects.length-3}</span>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// PERSONAS
+// ============================================================
+function renderPersonas() {
+  const search = document.getElementById('searchPersona').value.toLowerCase();
+  const rol = document.getElementById('filterRol').value;
+  const sen = document.getElementById('filterSeniority').value;
+  const disp = document.getElementById('filterDisp').value;
+
+  let personas = state.personas.filter(p => {
+    if (search && !p.nombre.toLowerCase().includes(search)) return false;
+    if (rol && p.rol !== rol) return false;
+    if (sen && p.seniority !== sen) return false;
+    if (disp === 'available' && getFTEAsignado(p.nombre) >= p.fte * 1.05) return false;
+    if (disp === 'overload' && getFTEAsignado(p.nombre) <= p.fte * 1.05) return false;
+    if (disp === 'inactive' && p.fte !== 0) return false;
+    return true;
+  });
+
+  const grid = document.getElementById('personaGrid');
+  if (personas.length === 0) { grid.innerHTML = '<div style="color:var(--text3);grid-column:1/-1;text-align:center;padding:40px">Sin resultados</div>'; return; }
+
+  grid.innerHTML = personas.map(p => {
+    const asig = getFTEAsignado(p.nombre);
+    const proyects = getProyectosPersona(p.nombre);
+    const cls = cargaClass(p.fte, asig);
+    return `<div class="persona-card ${cls}">
+      <div class="pc-top">
+        <div>
+          <div class="pc-name">${p.nombre}</div>
+          <div class="pc-role">${p.rol} · ${p.seniority}</div>
+        </div>
+        ${cargaBadge(p.fte, asig)}
+      </div>
+      ${p.fte > 0 ? progressBar(asig / Math.max(p.fte, 0.01)) : '<span class="badge gray" style="font-size:10px">No disponible</span>'}
+      <div class="pc-projects">${proyects.map(pr => `<span class="badge gray" style="font-size:10px">${pr}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">Sin proyectos</span>'}</div>
+      ${p.obs ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">ℹ ${p.obs}</div>` : ''}
+      <div class="pc-btn-row">
+        <button class="btn small" onclick="editPersona('${p.id}')">✏ Editar</button>
+        <button class="btn small" onclick="openAddAsignacionForPersona('${p.id}')">＋ Proyecto</button>
+        <button class="btn small danger" onclick="deletePersona('${p.id}')">✕ Dar de baja</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddPersona() {
+  editingPersonaId = null;
+  document.getElementById('modalPersonaTitle').textContent = 'Añadir persona';
+  document.getElementById('pNombre').value = '';
+  document.getElementById('pRol').value = 'Arquitecto Cloud';
+  document.getElementById('pSeniority').value = 'Senior';
+  document.getElementById('pFTE').value = '1';
+  document.getElementById('pObs').value = '';
+  document.getElementById('modalPersona').classList.add('open');
+}
+
+function editPersona(id) {
+  const p = state.personas.find(x => x.id === id);
+  if (!p) return;
+  editingPersonaId = id;
+  document.getElementById('modalPersonaTitle').textContent = 'Editar persona';
+  document.getElementById('pNombre').value = p.nombre;
+  document.getElementById('pRol').value = p.rol;
+  document.getElementById('pSeniority').value = p.seniority;
+  document.getElementById('pFTE').value = String(p.fte);
+  document.getElementById('pObs').value = p.obs || '';
+  document.getElementById('modalPersona').classList.add('open');
+}
+
+function savePersona() {
+  const nombre = document.getElementById('pNombre').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  const obj = {
+    nombre,
+    rol: document.getElementById('pRol').value,
+    seniority: document.getElementById('pSeniority').value,
+    fte: parseInt(document.getElementById('pFTE').value),
+    obs: document.getElementById('pObs').value.trim(),
+  };
+  if (editingPersonaId) {
+    const i = state.personas.findIndex(p => p.id === editingPersonaId);
+    state.personas[i] = {...state.personas[i], ...obj};
+    showToast('Persona actualizada ✓');
+  } else {
+    state.personas.push({id: uid(), ...obj});
+    showToast('Persona añadida ✓');
+  }
+  saveState(); closeModal('modalPersona'); renderAll();
+}
+
+function deletePersona(id) {
+  const p = state.personas.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Dar de baja a "${p.nombre}"? Se eliminarán sus asignaciones.`)) return;
+  state.personas = state.personas.filter(x => x.id !== id);
+  state.asignaciones = state.asignaciones.filter(a => a.persona !== p.nombre);
+  saveState(); renderAll(); showToast(`${p.nombre} eliminado ✓`);
+}
+
+// ============================================================
+// PROYECTOS
+// ============================================================
+function renderProyectos() {
+  const search = document.getElementById('searchProyecto').value.toLowerCase();
+  const estado = document.getElementById('filterEstado').value;
+
+  let proyectos = state.proyectos.filter(p => {
+    if (search && !p.nombre.toLowerCase().includes(search) && !p.cliente.toLowerCase().includes(search)) return false;
+    if (estado && p.estado !== estado) return false;
+    return true;
+  });
+
+  const tb = document.getElementById('proyectosTable');
+  if (!proyectos.length) { tb.innerHTML = '<tr class="empty-row"><td colspan="8">Sin resultados</td></tr>'; return; }
+
+  tb.innerHTML = proyectos.map(p => {
+    const ftes = getFTEsProyecto(p.nombre);
+    const estBadge = p.estado === 'Activo' ? 'green' : p.estado === 'Cerrado' ? 'gray' : 'purple';
+    return `<tr>
+      <td><strong>${p.nombre}</strong></td>
+      <td>${p.cliente}</td>
+      <td style="font-family:var(--mono);font-size:12px">${fmtDate(p.inicio)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${fmtDate(p.fin)}</td>
+      <td><span class="badge ${estBadge}">${p.estado}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${ftes.toFixed(1)}</td>
+      <td style="font-size:11px;color:var(--text2)">${p.obs||'—'}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn small" onclick="editProyecto('${p.id}')">✏</button>
+          <button class="btn small danger" onclick="deleteProyecto('${p.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddProyecto() {
+  editingProyectoId = null;
+  document.getElementById('modalProyectoTitle').textContent = 'Añadir proyecto';
+  ['prNombre','prCliente','prInicio','prFin','prObs'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('prEstado').value = 'Activo';
+  document.getElementById('modalProyecto').classList.add('open');
+}
+
+function editProyecto(id) {
+  const p = state.proyectos.find(x => x.id === id);
+  if (!p) return;
+  editingProyectoId = id;
+  document.getElementById('modalProyectoTitle').textContent = 'Editar proyecto';
+  document.getElementById('prNombre').value = p.nombre;
+  document.getElementById('prCliente').value = p.cliente;
+  document.getElementById('prInicio').value = p.inicio || '';
+  document.getElementById('prFin').value = p.fin || '';
+  document.getElementById('prEstado').value = p.estado;
+  document.getElementById('prObs').value = p.obs || '';
+  document.getElementById('modalProyecto').classList.add('open');
+}
+
+function saveProyecto() {
+  const nombre = document.getElementById('prNombre').value.trim();
+  const cliente = document.getElementById('prCliente').value.trim();
+  if (!nombre || !cliente) { alert('Nombre y cliente son obligatorios'); return; }
+  const obj = { nombre, cliente, inicio: document.getElementById('prInicio').value, fin: document.getElementById('prFin').value, estado: document.getElementById('prEstado').value, obs: document.getElementById('prObs').value.trim() };
+  if (editingProyectoId) {
+    const i = state.proyectos.findIndex(p => p.id === editingProyectoId);
+    state.proyectos[i] = {...state.proyectos[i], ...obj};
+    showToast('Proyecto actualizado ✓');
+  } else {
+    state.proyectos.push({id: uid(), ...obj});
+    showToast('Proyecto añadido ✓');
+  }
+  saveState(); closeModal('modalProyecto'); renderAll();
+}
+
+function deleteProyecto(id) {
+  const p = state.proyectos.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Eliminar proyecto "${p.nombre}"? Se eliminarán sus asignaciones.`)) return;
+  state.proyectos = state.proyectos.filter(x => x.id !== id);
+  state.asignaciones = state.asignaciones.filter(a => a.proyecto !== p.nombre);
+  saveState(); renderAll(); showToast(`Proyecto eliminado ✓`);
+}
+
+// ============================================================
+// ASIGNACIONES
+// ============================================================
+function populateAsigSelects() {
+  const selP = document.getElementById('filterPersonaAsig');
+  const selPr = document.getElementById('filterProyectoAsig');
+  const curP = selP.value; const curPr = selPr.value;
+  selP.innerHTML = '<option value="">Todas las personas</option>' + state.personas.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+  selPr.innerHTML = '<option value="">Todos los proyectos</option>' + state.proyectos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+  selP.value = curP; selPr.value = curPr;
+
+  // Modal selects
+  document.getElementById('aNombre').innerHTML = state.personas.map(p => `<option>${p.nombre}</option>`).join('');
+  document.getElementById('aProyecto').innerHTML = state.proyectos.map(p => `<option>${p.nombre}</option>`).join('');
+  if (selectedPersonaForAsignacion) document.getElementById('aNombre').value = selectedPersonaForAsignacion;
+}
+
+function renderAsignaciones() {
+  populateAsigSelects();
+  const search = document.getElementById('searchAsig').value.toLowerCase();
+  const fP = document.getElementById('filterPersonaAsig').value;
+  const fPr = document.getElementById('filterProyectoAsig').value;
+
+  let asigs = state.asignaciones.filter(a => {
+    if (search && !a.persona.toLowerCase().includes(search) && !a.proyecto.toLowerCase().includes(search)) return false;
+    if (fP && a.persona !== fP) return false;
+    if (fPr && a.proyecto !== fPr) return false;
+    return true;
+  });
+
+  const tb = document.getElementById('asignacionesTable');
+  if (!asigs.length) { tb.innerHTML = '<tr class="empty-row"><td colspan="8">Sin resultados</td></tr>'; return; }
+
+  tb.innerHTML = asigs.map(a => {
+    const cliente = (state.proyectos.find(p => p.nombre === a.proyecto)||{}).cliente || '—';
+    const pct = Math.round(parseFloat(a.ded)*100);
+    const dedClass = pct >= 100 ? 'green' : pct >= 50 ? 'amber' : 'gray';
+    return `<tr>
+      <td><strong>${a.persona}</strong></td>
+      <td>${a.proyecto}</td>
+      <td style="font-size:12px;color:var(--text2)">${cliente}</td>
+      <td style="font-size:12px">${a.rol||'—'}</td>
+      <td><span class="badge ${dedClass}">${pct}%</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${fmtDate(a.desde)}</td>
+      <td style="font-family:var(--mono);font-size:12px">${fmtDate(a.hasta)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn small" onclick="editAsignacion('${a.id}')">✏</button>
+          <button class="btn small danger" onclick="deleteAsignacion('${a.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddAsignacion(personaNombre = '') {
+  editingAsigId = null;
+  selectedPersonaForAsignacion = personaNombre || null;
+  document.getElementById('modalAsigTitle').textContent = personaNombre ? `Añadir proyecto a ${personaNombre}` : 'Añadir asignación';
+  populateAsigSelects();
+  document.getElementById('aDed').value = '1';
+  document.getElementById('aRol').value = '';
+  document.getElementById('aDesde').value = '';
+  document.getElementById('aHasta').value = '';
+  if (personaNombre) document.getElementById('aNombre').value = personaNombre;
+  document.getElementById('modalAsignacion').classList.add('open');
+}
+
+function openAddAsignacionForPersona(personaId) {
+  const persona = state.personas.find(p => p.id === personaId);
+  if (!persona) return;
+  openAddAsignacion(persona.nombre);
+}
+
+function editAsignacion(id) {
+  const a = state.asignaciones.find(x => x.id === id);
+  if (!a) return;
+  editingAsigId = id;
+  selectedPersonaForAsignacion = a.persona || null;
+  populateAsigSelects();
+  document.getElementById('modalAsigTitle').textContent = 'Editar asignación';
+  document.getElementById('aNombre').value = a.persona;
+  document.getElementById('aProyecto').value = a.proyecto;
+  document.getElementById('aDed').value = a.ded;
+  document.getElementById('aRol').value = a.rol || '';
+  document.getElementById('aDesde').value = a.desde || '';
+  document.getElementById('aHasta').value = a.hasta || '';
+  document.getElementById('modalAsignacion').classList.add('open');
+}
+
+function saveAsignacion() {
+  const proyectoNombre = document.getElementById('aProyecto').value;
+  const proyecto = state.proyectos.find(p => p.nombre === proyectoNombre);
+  const ded = parseFloat(document.getElementById('aDed').value);
+  const obj = {
+    persona: document.getElementById('aNombre').value,
+    proyecto: proyectoNombre,
+    ded: isNaN(ded) ? 0 : ded,
+    rol: document.getElementById('aRol').value.trim(),
+    desde: document.getElementById('aDesde').value || (proyecto ? proyecto.inicio : ''),
+    hasta: document.getElementById('aHasta').value || (proyecto ? proyecto.fin : ''),
+  };
+
+  if (!obj.persona || !obj.proyecto) { alert('Persona y proyecto son obligatorios'); return; }
+  if (obj.ded < 0) { alert('La dedicación no puede ser negativa'); return; }
+
+  const duplicada = state.asignaciones.some(a => a.persona === obj.persona && a.proyecto === obj.proyecto && a.id !== editingAsigId);
+  if (duplicada) { alert('Esa persona ya tiene ese proyecto asignado. Edita la asignación existente.'); return; }
+
+  if (editingAsigId) {
+    const i = state.asignaciones.findIndex(a => a.id === editingAsigId);
+    state.asignaciones[i] = {...state.asignaciones[i], ...obj};
+    showToast('Asignación actualizada ✓');
+  } else {
+    state.asignaciones.push({id: uid(), ...obj});
+    showToast('Proyecto añadido a la persona ✓');
+  }
+  saveState(); closeModal('modalAsignacion'); renderAll();
+}
+
+function deleteAsignacion(id) {
+  const a = state.asignaciones.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm(`¿Eliminar asignación de "${a.persona}" en "${a.proyecto}"?`)) return;
+  state.asignaciones = state.asignaciones.filter(x => x.id !== id);
+  saveState(); renderAll(); showToast('Asignación eliminada ✓');
+}
+
+
+function syncAsignacionDatesFromProject() {
+  const proyectoNombre = document.getElementById('aProyecto').value;
+  const proyecto = state.proyectos.find(p => p.nombre === proyectoNombre);
+  if (!proyecto) return;
+  const desde = document.getElementById('aDesde');
+  const hasta = document.getElementById('aHasta');
+  if (!desde.value && proyecto.inicio) desde.value = proyecto.inicio;
+  if (!hasta.value && proyecto.fin) hasta.value = proyecto.fin;
+}
+
+// ============================================================
+// MODALS
+// ============================================================
+function closeModal(id) { if (id === 'modalAsignacion') selectedPersonaForAsignacion = null; document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); }));
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `supply_demand_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Exportado ✓');
+}
+
+function importJSON(e) {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (!d.personas || !d.proyectos || !d.asignaciones) throw new Error('Formato inválido');
+      if (!confirm(`Importar ${d.personas.length} personas, ${d.proyectos.length} proyectos, ${d.asignaciones.length} asignaciones? Esto reemplazará los datos actuales.`)) return;
+      state = d;
+      saveState(); renderAll();
+      showToast('Importado correctamente ✓');
+    } catch(err) { alert('Error al importar: ' + err.message); }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+}
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll() {
+  renderDashboard();
+  renderPersonas();
+  renderProyectos();
+  renderAsignaciones();
+  updateLastUpdateLabel();
+}
+
+// INIT
+updateSharedFileLabel();
+renderAll();
+loadStateFromSupabase();
+</script>
+</body>
+</html>
