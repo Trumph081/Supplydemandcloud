@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Supply & Demand</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --bg2: #13161e;
+      --bg3: #1a1e28;
+      --border: #252a38;
+      --border2: #2e3548;
+      --text: #c8cedd;
+      --text2: #7a8299;
+      --text3: #4a5168;
+      --accent: #3b82f6;
+      --accent2: #1d4ed8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .title-wrap h1 { margin: 0; font-size: 18px; }
+    .title-wrap p { margin: 4px 0 0; color: var(--text2); font-size: 12px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn {
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn:hover { opacity: .95; }
+    .container { max-width: 1500px; margin: 0 auto; padding: 24px; }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .kpi-label { color: var(--text2); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value { font-size: 30px; margin-top: 8px; font-weight: 700; }
+    .kpi-sub { color: var(--text3); font-size: 12px; margin-top: 6px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .card h3 { margin: 0 0 14px; font-size: 14px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+    .chart-wrap { height: 280px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 13px; text-align: left; }
+    th { color: var(--text2); font-size: 11px; text-transform: uppercase; }
+    .tag {
+      display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 11px;
+      border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+    }
+    .ok { color: var(--green); }
+    .warn { color: var(--amber); }
+    .bad { color: var(--red); }
+    .hidden { display: none !important; }
+    #loginView {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .login-box h2 { margin: 0 0 8px; }
+    .login-box p { margin: 0 0 18px; color: var(--text2); font-size: 14px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; margin-bottom: 6px; font-size: 12px; color: var(--text2); }
+    .field input {
+      width: 100%; background: var(--bg3); color: var(--text); border: 1px solid var(--border2);
+      border-radius: 10px; padding: 12px 14px; font-size: 14px;
+    }
+    .error { color: var(--red); font-size: 13px; min-height: 18px; margin: 8px 0 0; }
+    .session-pill {
+      font-size: 12px; color: var(--text2); border: 1px solid var(--border2); border-radius: 999px; padding: 8px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginView">
+    <div class="login-box">
+      <h2>Entrar al dashboard</h2>
+      <p>Acceso con Supabase Auth.</p>
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="tu@empresa.com" />
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input id="password" type="password" placeholder="••••••••" />
+      </div>
+      <button class="btn primary" style="width:100%" onclick="login()">Entrar</button>
+      <div class="error" id="loginError"></div>
+    </div>
+  </div>
+
+  <div id="appView" class="hidden">
+    <header>
+      <div class="title-wrap">
+        <h1>Dashboard Supply & Demand</h1>
+        <p id="lastRefresh">Sin datos</p>
+      </div>
+      <div class="header-actions">
+        <span class="session-pill" id="sessionUser"></span>
+        <button class="btn" onclick="loadDashboard()">Recargar</button>
+        <button class="btn" onclick="logout()">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="kpis" id="kpis"></div>
+
+      <div class="grid">
+        <div class="card"><h3>Capacidad</h3><div class="chart-wrap"><canvas id="capacidadChart"></canvas></div></div>
+        <div class="card"><h3>Estado de carga</h3><div class="chart-wrap"><canvas id="cargaChart"></canvas></div></div>
+        <div class="card"><h3>Personas por rol</h3><div class="chart-wrap"><canvas id="rolChart"></canvas></div></div>
+        <div class="card"><h3>Personas por seniority</h3><div class="chart-wrap"><canvas id="seniorityChart"></canvas></div></div>
+        <div class="card"><h3>Proyectos por estado</h3><div class="chart-wrap"><canvas id="estadoChart"></canvas></div></div>
+        <div class="card"><h3>Top clientes por FTE</h3><div class="chart-wrap"><canvas id="clientesChart"></canvas></div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Top personas por carga</h3>
+          <table>
+            <thead><tr><th>Persona</th><th>Rol</th><th>Carga</th><th>Estado</th></tr></thead>
+            <tbody id="topPersonas"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Top proyectos por dedicación</h3>
+          <table>
+            <thead><tr><th>Proyecto</th><th>Cliente</th><th>FTE</th><th>Estado</th></tr></thead>
+            <tbody id="topProyectos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let charts = {};
+
+    async function login() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      document.getElementById('loginError').textContent = '';
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        document.getElementById('loginError').textContent = error.message || 'Error de login';
+        return;
+      }
+      await boot();
+    }
+
+    async function logout() {
+      await sb.auth.signOut();
+      document.getElementById('appView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('sessionUser').textContent = '';
+    }
+
+    async function boot() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        document.getElementById('appView').classList.add('hidden');
+        document.getElementById('loginView').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('sessionUser').textContent = session.user.email;
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      await loadDashboard();
+    }
+
+    function destroyCharts() {
+      Object.values(charts).forEach(ch => ch?.destroy?.());
+      charts = {};
+    }
+
+    function donut(id, labels, data) {
+      const ctx = document.getElementById(id);
+      charts[id] = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#c8cedd' } }
+          }
+        }
+      });
+    }
+
+    function sum(arr) { return arr.reduce((a,b)=>a+b,0); }
+
+    async function loadDashboard() {
+      const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: asignaciones, error: e3 }] = await Promise.all([
+        sb.from('personas').select('*'),
+        sb.from('proyectos').select('*'),
+        sb.from('asignaciones').select('*, personas:persona_id(id,nombre,rol,seniority,fte), proyectos:proyecto_id(id,nombre,cliente,estado)')
+      ]);
+
+      if (e1 || e2 || e3) {
+        alert((e1||e2||e3).message || 'Error cargando datos');
+        return;
+      }
+
+      const personasArr = personas || [];
+      const proyectosArr = proyectos || [];
+      const asigArr = asignaciones || [];
+
+      const cargaPorPersona = personasArr.map(p => {
+        const asig = asigArr.filter(a => a.persona_id === p.id).reduce((s,a) => s + Number(a.ded || 0), 0);
+        const ratio = p.fte > 0 ? asig / Number(p.fte) : 0;
+        let estado = 'No disponible';
+        if (Number(p.fte) > 0) {
+          if (asig === 0) estado = 'Libre';
+          else if (ratio > 1.05) estado = 'Sobrecargado';
+          else if (ratio >= 0.95) estado = 'Completo';
+          else estado = 'Parcial';
+        }
+        return { ...p, asig, ratio, estado };
+      });
+
+      const totalFte = sum(personasArr.map(p => Number(p.fte || 0)));
+      const asignadoFte = sum(cargaPorPersona.map(p => Math.min(Number(p.fte || 0), p.asig)));
+      const libreFte = Math.max(0, totalFte - asignadoFte);
+      const activas = proyectosArr.filter(p => p.estado === 'Activo').length;
+      const bench = cargaPorPersona.filter(p => p.estado === 'Libre').length;
+      const overload = cargaPorPersona.filter(p => p.estado === 'Sobrecargado').length;
+      const disponibles = personasArr.filter(p => Number(p.fte) > 0).length;
+
+      document.getElementById('kpis').innerHTML = `
+        <div class="card"><div class="kpi-label">Personas</div><div class="kpi-value">${personasArr.length}</div><div class="kpi-sub">${disponibles} disponibles</div></div>
+        <div class="card"><div class="kpi-label">Proyectos activos</div><div class="kpi-value">${activas}</div><div class="kpi-sub">${proyectosArr.length} totales</div></div>
+        <div class="card"><div class="kpi-label">FTE total</div><div class="kpi-value">${totalFte.toFixed(1)}</div><div class="kpi-sub">Capacidad</div></div>
+        <div class="card"><div class="kpi-label">FTE asignado</div><div class="kpi-value">${asignadoFte.toFixed(1)}</div><div class="kpi-sub">Uso real</div></div>
+        <div class="card"><div class="kpi-label">FTE libre</div><div class="kpi-value">${libreFte.toFixed(1)}</div><div class="kpi-sub">Bench agregado</div></div>
+        <div class="card"><div class="kpi-label">Sobrecargados</div><div class="kpi-value">${overload}</div><div class="kpi-sub">>${100}%</div></div>
+      `;
+
+      destroyCharts();
+
+      donut('capacidadChart', ['Asignado', 'Libre'], [Number(asignadoFte.toFixed(2)), Number(libreFte.toFixed(2))]);
+
+      const estadoCarga = {
+        Libre: cargaPorPersona.filter(p => p.estado === 'Libre').length,
+        Parcial: cargaPorPersona.filter(p => p.estado === 'Parcial').length,
+        Completo: cargaPorPersona.filter(p => p.estado === 'Completo').length,
+        Sobrecargado: cargaPorPersona.filter(p => p.estado === 'Sobrecargado').length,
+        'No disponible': cargaPorPersona.filter(p => p.estado === 'No disponible').length,
+      };
+      donut('cargaChart', Object.keys(estadoCarga), Object.values(estadoCarga));
+
+      const byRol = personasArr.reduce((acc,p)=>{acc[p.rol]=(acc[p.rol]||0)+1; return acc;},{});
+      donut('rolChart', Object.keys(byRol), Object.values(byRol));
+
+      const bySen = personasArr.reduce((acc,p)=>{acc[p.seniority]=(acc[p.seniority]||0)+1; return acc;},{});
+      donut('seniorityChart', Object.keys(bySen), Object.values(bySen));
+
+      const byEstado = proyectosArr.reduce((acc,p)=>{acc[p.estado]=(acc[p.estado]||0)+1; return acc;},{});
+      donut('estadoChart', Object.keys(byEstado), Object.values(byEstado));
+
+      const byCliente = {};
+      asigArr.forEach(a => {
+        const cliente = a.proyectos?.cliente || 'Sin cliente';
+        byCliente[cliente] = (byCliente[cliente] || 0) + Number(a.ded || 0);
+      });
+      const topClientes = Object.entries(byCliente).sort((a,b)=>b[1]-a[1]).slice(0,6);
+      donut('clientesChart', topClientes.map(x=>x[0]), topClientes.map(x=>Number(x[1].toFixed(2))));
+
+      document.getElementById('topPersonas').innerHTML = cargaPorPersona
+        .sort((a,b)=>b.ratio-a.ratio)
+        .slice(0,10)
+        .map(p => `<tr><td>${p.nombre}</td><td>${p.rol}</td><td>${(p.ratio*100).toFixed(0)}%</td><td><span class="tag ${p.estado === 'Sobrecargado' ? 'bad' : p.estado === 'Parcial' ? 'warn' : 'ok'}">${p.estado}</span></td></tr>`)
+        .join('');
+
+      const byProyecto = {};
+      asigArr.forEach(a => {
+        const key = a.proyectos?.nombre || 'Sin proyecto';
+        if (!byProyecto[key]) {
+          byProyecto[key] = {
+            nombre: key,
+            cliente: a.proyectos?.cliente || '—',
+            estado: a.proyectos?.estado || '—',
+            fte: 0
+          };
+        }
+        byProyecto[key].fte += Number(a.ded || 0);
+      });
+      document.getElementById('topProyectos').innerHTML = Object.values(byProyecto)
+        .sort((a,b)=>b.fte-a.fte)
+        .slice(0,10)
+        .map(p => `<tr><td>${p.nombre}</td><td>${p.cliente}</td><td>${p.fte.toFixed(2)}</td><td><span class="tag">${p.estado}</span></td></tr>`)
+        .join('');
+
+      document.getElementById('lastRefresh').textContent = 'Actualizado: ' + new Date().toLocaleString('es-ES');
+    }
+
+    sb.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await boot();
+      } else {
+        document.getElementById('appView').classList.add('hidden');
+        document.getElementById('loginView').classList.remove('hidden');
+      }
+    });
+
+    boot();
+  </script>
+</body>
+</html>
