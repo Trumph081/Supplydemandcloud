@@ -123,6 +123,7 @@
   <div id="loginView">
     <div class="login-box">
       <h2>Entrar al dashboard</h2>
+      <div class="error" id="loginStatus" style="color:#7a8299;margin-bottom:8px"></div>
       <p>Acceso con Supabase Auth.</p>
       <div class="field">
         <label>Email</label>
@@ -132,7 +133,7 @@
         <label>Contraseña</label>
         <input id="password" type="password" placeholder="••••••••" />
       </div>
-      <button class="btn primary" style="width:100%" onclick="login()">Entrar</button>
+      <button id="loginBtn" class="btn primary" style="width:100%" onclick="login()">Entrar</button>
       <div class="error" id="loginError"></div>
     </div>
   </div>
@@ -182,8 +183,8 @@
   </div>
 
   <script>
-    const SUPABASE_URL = 'https://xbhvzmjxrzuwwaxugeay.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_NrnjvJoxp82CG0E_TwQlmQ_tspQDN0J';
+    const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let charts = {};
@@ -191,13 +192,35 @@
     async function login() {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      document.getElementById('loginError').textContent = '';
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) {
-        document.getElementById('loginError').textContent = error.message || 'Error de login';
+      const errEl = document.getElementById('loginError');
+      const statusEl = document.getElementById('loginStatus');
+      const btnEl = document.getElementById('loginBtn');
+      errEl.textContent = '';
+      statusEl.textContent = '';
+      if (!email || !password) {
+        errEl.textContent = 'Mete email y contraseña.';
         return;
       }
-      await boot();
+      btnEl.disabled = true;
+      btnEl.textContent = 'Entrando...';
+      statusEl.textContent = 'Validando credenciales...';
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) {
+          errEl.textContent = error.message || 'Error de login';
+          statusEl.textContent = '';
+          return;
+        }
+        statusEl.textContent = 'Login correcto.';
+        await boot();
+      } catch (e) {
+        console.error(e);
+        errEl.textContent = e?.message || 'Error inesperado en login';
+        statusEl.textContent = '';
+      } finally {
+        btnEl.disabled = false;
+        btnEl.textContent = 'Entrar';
+      }
     }
 
     async function logout() {
@@ -353,6 +376,12 @@
         document.getElementById('appView').classList.add('hidden');
         document.getElementById('loginView').classList.remove('hidden');
       }
+    });
+
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !document.getElementById('appView').classList.contains('hidden')) return;
+      if (e.key === 'Enter') login();
     });
 
     boot();
