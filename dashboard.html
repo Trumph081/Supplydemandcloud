@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Supply & Demand — Equipo C&I Cloud</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#252a38;--border2:#2e3548;
+  --text:#c8cedd;--text2:#7a8299;--text3:#4a5168;--accent:#3b82f6;--accent2:#1d4ed8;
+  --green:#22c55e;--amber:#f59e0b;--red:#ef4444;--purple:#a855f7;--cyan:#06b6d4;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+header{
+  background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 24px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:20
+}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:var(--purple);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:600;color:#fff}
+h1{font-size:15px;font-weight:600;letter-spacing:-0.01em}
+.subtitle,.muted{font-size:12px;color:var(--text2);font-family:var(--mono)}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:7px 12px;
+  border-radius:6px;font-size:12px;cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent2);color:#fff}
+.content{padding:24px;max-width:1600px;margin:0 auto}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:22px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.kpi-card.green::before{background:var(--green)} .kpi-card.amber::before{background:var(--amber)}
+.kpi-card.red::before{background:var(--red)} .kpi-card.purple::before{background:var(--purple)}
+.kpi-card.cyan::before{background:var(--cyan)}
+.kpi-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:600;font-family:var(--mono);line-height:1}
+.kpi-sub{font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
+.section{margin-bottom:24px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px;flex-wrap:wrap}
+.section-title{font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--text2);text-transform:uppercase}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-card{min-height:320px;display:flex;flex-direction:column}
+.chart-wrap{position:relative;flex:1;min-height:240px}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg3);border-bottom:1px solid var(--border)}
+th{padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);text-align:left;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.badge.green{background:rgba(34,197,94,.08);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.badge.amber{background:rgba(245,158,11,.08);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.badge.red{background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.badge.blue{background:rgba(59,130,246,.08);color:var(--accent);border:1px solid rgba(59,130,246,.2)}
+.badge.gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border2)}
+.alert{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:13px}
+.alert.warning{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--amber)}
+.alert.danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:var(--red)}
+.legend-note{font-size:11px;color:var(--text3);margin-top:8px}
+.footer-note{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.empty{color:var(--text3);text-align:center;padding:24px;font-style:italic}
+@media (max-width:1100px){.grid-3,.grid-2{grid-template-columns:1fr}}
+@media (max-width:700px){header{flex-direction:column;align-items:flex-start}.content{padding:16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">DB</div>
+    <div>
+      <h1>Dashboard Supply &amp; Demand — Equipo C&amp;I Cloud</h1>
+      <div class="subtitle">Lectura desde Supabase · Vista ejecutiva</div>
+    </div>
+  </div>
+  <div class="actions">
+    <span class="muted" id="statusLabel">Conectando…</span>
+    <a class="btn" href="./index.html">← Volver a gestión</a>
+    <button class="btn" onclick="loadDashboard()">🔄 Recargar</button>
+  </div>
+</header>
+
+<div class="content">
+  <div id="alertsRow"></div>
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Gráficos circulares</span>
+      <span class="footer-note" id="lastUpdateLabel">Última carga: —</span>
+    </div>
+    <div class="grid-3">
+      <div class="card chart-card"><div class="section-title">Capacidad</div><div class="chart-wrap"><canvas id="capacidadChart"></canvas></div><div class="legend-note">FTE asignado vs FTE libre.</div></div>
+      <div class="card chart-card"><div class="section-title">Estado de carga personas</div><div class="chart-wrap"><canvas id="cargaChart"></canvas></div><div class="legend-note">Libres, parciales, fully booked y sobreasignadas.</div></div>
+      <div class="card chart-card"><div class="section-title">Personas por rol</div><div class="chart-wrap"><canvas id="rolesChart"></canvas></div><div class="legend-note">Distribución del equipo.</div></div>
+      <div class="card chart-card"><div class="section-title">Personas por seniority</div><div class="chart-wrap"><canvas id="seniorityChart"></canvas></div><div class="legend-note">Senior / Mid / Junior.</div></div>
+      <div class="card chart-card"><div class="section-title">Proyectos por estado</div><div class="chart-wrap"><canvas id="proyectosEstadoChart"></canvas></div><div class="legend-note">Activo / Cerrado / Pipeline.</div></div>
+      <div class="card chart-card"><div class="section-title">Top clientes por FTE</div><div class="chart-wrap"><canvas id="clientesChart"></canvas></div><div class="legend-note">Reparto de carga en clientes principales.</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header"><span class="section-title">Tablas operativas</span></div>
+    <div class="grid-2">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Persona</th><th>Rol</th><th>FTE disp.</th><th>FTE asig.</th><th>Estado</th></tr></thead>
+          <tbody id="personasTopTable"></tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Proyecto</th><th>Cliente</th><th>Estado</th><th>FTE</th><th>Personas</th></tr></thead>
+          <tbody id="proyectosTopTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = "PEGA_AQUI_TU_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#64748b','#f97316','#84cc16','#ec4899'];
+let charts = {};
+
+function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+function round2(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+function fmt(n){ return round2(n).toFixed(2); }
+
+async function loadDashboard() {
+  try {
+    setStatus('Cargando…');
+    const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: asignacionesRaw, error: e3 }] = await Promise.all([
+      supabaseClient.from('personas').select('*').order('nombre'),
+      supabaseClient.from('proyectos').select('*').order('nombre'),
+      supabaseClient.from('asignaciones').select(`
+        id, rol, ded, desde, hasta,
+        personas:persona_id ( id, nombre, rol, seniority, fte, obs ),
+        proyectos:proyecto_id ( id, nombre, cliente, estado, inicio, fin, obs )
+      `)
+    ]);
+
+    if (e1 || e2 || e3) throw (e1 || e2 || e3);
+
+    const state = {
+      personas: personas || [],
+      proyectos: proyectos || [],
+      asignaciones: (asignacionesRaw || []).map(a => ({
+        id: a.id,
+        persona_id: a.personas?.id || '',
+        persona: a.personas?.nombre || '',
+        proyecto_id: a.proyectos?.id || '',
+        proyecto: a.proyectos?.nombre || '',
+        cliente: a.proyectos?.cliente || '',
+        proyecto_estado: a.proyectos?.estado || '',
+        rol: a.rol || '',
+        ded: Number(a.ded) || 0,
+        desde: a.desde,
+        hasta: a.hasta
+      }))
+    };
+
+    renderDashboard(state);
+    setStatus('Datos: Supabase');
+    document.getElementById('lastUpdateLabel').textContent = 'Última carga: ' + new Date().toLocaleString('es-ES');
+  } catch (err) {
+    console.error(err);
+    setStatus('Error cargando');
+    document.getElementById('alertsRow').innerHTML = '<div class="alert danger">⚠ No se han podido cargar datos desde Supabase. Revisa URL, key, tablas y policies.</div>';
+  }
+}
+
+function renderDashboard(state) {
+  const personas = state.personas;
+  const proyectos = state.proyectos;
+  const asignaciones = state.asignaciones;
+
+  const personMap = new Map(personas.map(p => [p.id, p]));
+  const projectMap = new Map(proyectos.map(p => [p.id, p]));
+
+  const cargaPorPersona = {};
+  personas.forEach(p => cargaPorPersona[p.id] = 0);
+  asignaciones.forEach(a => {
+    if (cargaPorPersona[a.persona_id] == null) cargaPorPersona[a.persona_id] = 0;
+    cargaPorPersona[a.persona_id] += Number(a.ded) || 0;
+  });
+
+  const proyectosPorPersona = {};
+  personas.forEach(p => proyectosPorPersona[p.id] = []);
+  asignaciones.forEach(a => {
+    if (!proyectosPorPersona[a.persona_id]) proyectosPorPersona[a.persona_id] = [];
+    proyectosPorPersona[a.persona_id].push(a.proyecto);
+  });
+
+  const capacidadTotal = sum(personas.map(p => Number(p.fte) || 0));
+  const asignadoTotal = sum(personas.map(p => Math.min(Number(p.fte) || 0, cargaPorPersona[p.id] || 0)));
+  const libreTotal = sum(personas.map(p => Math.max(0, (Number(p.fte) || 0) - (cargaPorPersona[p.id] || 0))));
+  const sobreTotal = sum(personas.map(p => Math.max(0, (cargaPorPersona[p.id] || 0) - (Number(p.fte) || 0))));
+  const activos = proyectos.filter(p => p.estado === 'Activo').length;
+  const cerrados = proyectos.filter(p => p.estado === 'Cerrado').length;
+  const pipeline = proyectos.filter(p => p.estado === 'Pipeline').length;
+
+  let libres = 0, parciales = 0, full = 0, overload = 0, inactivos = 0;
+  personas.forEach(p => {
+    const fte = Number(p.fte) || 0;
+    const asig = cargaPorPersona[p.id] || 0;
+    if (fte === 0) { inactivos++; return; }
+    if (asig === 0) libres++;
+    else if (asig > fte + 0.001) overload++;
+    else if (Math.abs(asig - fte) < 0.001 || asig >= fte * 0.95) full++;
+    else parciales++;
+  });
+
+  const benchFte = libreTotal;
+  const totalDisponibles = personas.filter(p => (Number(p.fte)||0) > 0).length;
+
+  const kpis = [
+    ['Personas totales', personas.length, `${totalDisponibles} disponibles`, ''],
+    ['Proyectos activos', activos, `${cerrados} cerrados · ${pipeline} pipeline`, 'purple'],
+    ['FTE total', fmt(capacidadTotal), 'Capacidad declarada', 'cyan'],
+    ['FTE asignado', fmt(asignadoTotal), 'Carga consumida', 'green'],
+    ['Bench FTE libre', fmt(benchFte), `${libres} personas 100% libres`, 'amber'],
+    ['Sobrecarga FTE', fmt(sobreTotal), `${overload} personas sobreasignadas`, 'red'],
+  ];
+
+  document.getElementById('kpiRow').innerHTML = kpis.map(([label,val,sub,cls]) => `
+    <div class="kpi-card ${cls}">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value">${val}</div>
+      <div class="kpi-sub">${sub}</div>
+    </div>
+  `).join('');
+
+  let alerts = '';
+  if (overload > 0) alerts += `<div class="alert danger">⚠ ${overload} personas por encima del 100% de carga. Sobrecarga FTE total: ${fmt(sobreTotal)}.</div>`;
+  if (libres > 0) alerts += `<div class="alert warning">ℹ ${libres} personas están completamente libres. Bench FTE libre: ${fmt(benchFte)}.</div>`;
+  document.getElementById('alertsRow').innerHTML = alerts;
+
+  const rolesCounts = countBy(personas, 'rol');
+  const seniorityCounts = countBy(personas, 'seniority');
+  const proyectosEstadoCounts = countBy(proyectos, 'estado');
+
+  const clienteFte = {};
+  asignaciones.forEach(a => {
+    const cliente = a.cliente || 'Sin cliente';
+    clienteFte[cliente] = (clienteFte[cliente] || 0) + (Number(a.ded) || 0);
+  });
+  const topClientes = Object.entries(clienteFte).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  renderDonut('capacidadChart',
+    ['FTE asignado','FTE libre','FTE sobreasignado'],
+    [round2(asignadoTotal), round2(benchFte), round2(sobreTotal)],
+    ['#22c55e','#f59e0b','#ef4444']
+  );
+  renderDonut('cargaChart',
+    ['100% libres','Parciales','Fully booked','Sobrecargadas','No disponibles'],
+    [libres, parciales, full, overload, inactivos],
+    ['#64748b','#f59e0b','#22c55e','#ef4444','#334155']
+  );
+  renderDonut('rolesChart', Object.keys(rolesCounts), Object.values(rolesCounts), COLORS);
+  renderDonut('seniorityChart', Object.keys(seniorityCounts), Object.values(seniorityCounts), ['#3b82f6','#f59e0b','#64748b']);
+  renderDonut('proyectosEstadoChart', Object.keys(proyectosEstadoCounts), Object.values(proyectosEstadoCounts), ['#22c55e','#64748b','#a855f7']);
+  renderDonut('clientesChart', topClientes.map(x=>x[0]), topClientes.map(x=>round2(x[1])), COLORS);
+
+  const personasTable = personas.map(p => {
+    const fte = Number(p.fte) || 0;
+    const asig = round2(cargaPorPersona[p.id] || 0);
+    let badge = '<span class="badge gray">No disp.</span>';
+    if (fte > 0 && asig === 0) badge = '<span class="badge gray">Libre</span>';
+    else if (fte > 0 && asig > fte + 0.001) badge = '<span class="badge red">Sobrecargada</span>';
+    else if (fte > 0 && asig >= fte * 0.95) badge = '<span class="badge green">Full</span>';
+    else if (fte > 0) badge = '<span class="badge amber">Parcial</span>';
+    return { nombre: p.nombre, rol: p.rol, fte, asig, badge };
+  }).sort((a,b)=>b.asig-a.asig || a.nombre.localeCompare(b.nombre)).slice(0,12);
+
+  document.getElementById('personasTopTable').innerHTML = personasTable.length ? personasTable.map(r => `
+    <tr>
+      <td><strong>${r.nombre}</strong></td>
+      <td><span class="badge gray">${r.rol}</span></td>
+      <td>${fmt(r.fte)}</td>
+      <td>${fmt(r.asig)}</td>
+      <td>${r.badge}</td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="5">Sin datos</td></tr>';
+
+  const proyectoAgg = {};
+  proyectos.forEach(p => proyectoAgg[p.id] = { nombre:p.nombre, cliente:p.cliente, estado:p.estado, fte:0, personas:new Set() });
+  asignaciones.forEach(a => {
+    if (!proyectoAgg[a.proyecto_id]) {
+      proyectoAgg[a.proyecto_id] = { nombre:a.proyecto, cliente:a.cliente, estado:a.proyecto_estado, fte:0, personas:new Set() };
+    }
+    proyectoAgg[a.proyecto_id].fte += Number(a.ded) || 0;
+    if (a.persona) proyectoAgg[a.proyecto_id].personas.add(a.persona);
+  });
+  const proyectosTable = Object.values(proyectoAgg).sort((a,b)=>b.fte-a.fte || a.nombre.localeCompare(b.nombre)).slice(0,12);
+
+  document.getElementById('proyectosTopTable').innerHTML = proyectosTable.length ? proyectosTable.map(r => `
+    <tr>
+      <td><strong>${r.nombre}</strong></td>
+      <td>${r.cliente || '—'}</td>
+      <td><span class="badge ${r.estado === 'Activo' ? 'green' : r.estado === 'Cerrado' ? 'gray' : 'blue'}">${r.estado || '—'}</span></td>
+      <td>${fmt(r.fte)}</td>
+      <td>${r.personas.size}</td>
+    </tr>
+  `).join('') : '<tr><td class="empty" colspan="5">Sin datos</td></tr>';
+}
+
+function countBy(arr, key){
+  const out = {};
+  arr.forEach(x => {
+    const v = x[key] || 'Sin valor';
+    out[v] = (out[v] || 0) + 1;
+  });
+  return out;
+}
+
+function renderDonut(canvasId, labels, data, colors){
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  const filtered = labels.map((l,i)=>({label:l,value:Number(data[i])||0,color:colors[i % colors.length]})).filter(x=>x.value > 0);
+  if (charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(el, {
+    type: 'doughnut',
+    data: {
+      labels: filtered.map(x=>x.label),
+      datasets: [{ data: filtered.map(x=>x.value), backgroundColor: filtered.map(x=>x.color), borderColor: '#13161e', borderWidth: 2 }]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#c8cedd', boxWidth:12, padding:14, font:{ size:11, family:'IBM Plex Sans' } } },
+        tooltip:{ titleColor:'#fff', bodyColor:'#fff', backgroundColor:'rgba(17,24,39,.95)', borderColor:'#2e3548', borderWidth:1 }
+      }
+    }
+  });
+}
+
+function setStatus(txt){
+  document.getElementById('statusLabel').textContent = txt;
+}
+
+loadDashboard();
+</script>
+</body>
+</html>
