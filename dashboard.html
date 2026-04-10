@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Semanal · Supply & Demand</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --bg2: #13161e;
+      --bg3: #1a1e28;
+      --panel: #171b24;
+      --border: #252a38;
+      --text: #d7ddea;
+      --text2: #8e97b3;
+      --accent: #3b82f6;
+      --green: #6fd1c6;
+      --green2: #9be1d9;
+      --blue2: #7486ff;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+    .wrap{max-width:1600px;margin:0 auto;padding:24px}
+    .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+    h1{margin:0;font-size:28px;font-weight:700}
+    .sub{color:var(--text2);font-size:13px;margin-top:6px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn,.select{
+      background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:10px;
+      padding:10px 14px;font-size:13px
+    }
+    .btn{cursor:pointer}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:white}
+    .btn:hover{filter:brightness(1.05)}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+    .kpi{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px}
+    .kpi .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .kpi .value{font-size:30px;font-weight:700;line-height:1}
+    .kpi .subv{font-size:12px;color:var(--text2);margin-top:8px;font-family:var(--mono)}
+    .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px}
+    .card h2{margin:0 0 12px;font-size:15px}
+    .chart-wrap{position:relative;height:320px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;border-bottom:1px solid var(--border);text-align:left;font-size:13px}
+    th{color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:var(--mono)}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border);color:var(--text2)}
+    .ok{color:var(--green2)} .warn{color:var(--amber)} .bad{color:var(--red)}
+    .login{max-width:420px;margin:10vh auto;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px}
+    .login h2{margin-top:0}
+    .field{margin-bottom:12px}
+    .field label{display:block;color:var(--text2);font-size:12px;margin-bottom:6px}
+    .field input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+    .hidden{display:none!important}
+    .msg{margin-top:10px;font-size:13px;color:var(--text2)}
+    @media (max-width: 1100px){.grid2,.grid3{grid-template-columns:1fr}.chart-wrap{height:280px}}
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login hidden">
+    <h2>Acceso dashboard</h2>
+    <div class="field">
+      <label>Email</label>
+      <input id="email" type="email" placeholder="tu@empresa.com" />
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input id="password" type="password" placeholder="••••••••" />
+    </div>
+    <button class="btn primary" id="loginBtn">Entrar</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="appView" class="hidden">
+    <div class="wrap">
+      <div class="topbar">
+        <div>
+          <h1>Dashboard semanal · Supply & Demand</h1>
+          <div class="sub" id="subtitle">Capacidad, asignado y libre por semana</div>
+        </div>
+        <div class="actions">
+          <select class="select" id="weeksBack">
+            <option value="8">Últimas 8 semanas</option>
+            <option value="12" selected>Últimas 12 semanas</option>
+            <option value="16">Últimas 16 semanas</option>
+            <option value="20">Últimas 20 semanas</option>
+          </select>
+          <button class="btn" id="refreshBtn">Recargar</button>
+          <button class="btn" id="logoutBtn">Cerrar sesión</button>
+        </div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Capacidad vs Asignado vs Libre</h2>
+          <div class="chart-wrap"><canvas id="capacityChart"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Asignado vs Libre</h2>
+          <div class="chart-wrap"><canvas id="stackedChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="card">
+          <h2>Distribución actual de carga</h2>
+          <div class="chart-wrap" style="height:270px"><canvas id="loadDonut"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Capacidad actual</h2>
+          <div class="chart-wrap" style="height:270px"><canvas id="capacityDonut"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Proyectos por estado</h2>
+          <div class="chart-wrap" style="height:270px"><canvas id="projectDonut"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Top personas por carga actual</h2>
+          <table>
+            <thead><tr><th>Persona</th><th>Rol</th><th>Carga</th><th>Estado</th></tr></thead>
+            <tbody id="peopleTable"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Top proyectos por FTE actual</h2>
+          <table>
+            <thead><tr><th>Proyecto</th><th>Cliente</th><th>FTE</th><th>Estado</th></tr></thead>
+            <tbody id="projectsTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+const SUPABASE_PUBLISHABLE_KEY = 'PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let charts = {};
+let currentData = { personas: [], proyectos: [], asignaciones: [] };
+
+function isoWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay() || 7;
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - day + 1);
+  return d;
+}
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function formatWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+}
+function parseDate(s) {
+  if (!s) return null;
+  const d = new Date(s + 'T00:00:00');
+  return isNaN(d) ? null : d;
+}
+function overlapsWeek(desde, hasta, weekStart, weekEnd) {
+  const d = parseDate(desde) || new Date('1900-01-01');
+  const h = parseDate(hasta) || new Date('2999-12-31');
+  return d <= weekEnd && h >= weekStart;
+}
+function currentWeekWindow() {
+  const start = isoWeekStart(new Date());
+  const end = addDays(start, 6);
+  return { start, end, label: formatWeek(start) };
+}
+function summarizeLoad(personas, asignaciones, proyectos, weekStart, weekEnd) {
+  const projectsById = Object.fromEntries(proyectos.map(p => [p.id, p]));
+  const activeAssignments = asignaciones.filter(a => overlapsWeek(a.desde, a.hasta, weekStart, weekEnd));
+
+  const peopleRows = personas.map(p => {
+    const assigned = activeAssignments.filter(a => a.persona_id === p.id).reduce((s, a) => s + Number(a.ded || 0), 0);
+    const ratio = p.fte > 0 ? assigned / Number(p.fte) : 0;
+    let status = 'Libre';
+    let cls = 'ok';
+    if (Number(p.fte) === 0) { status = 'No disponible'; cls = 'warn'; }
+    else if (assigned === 0) { status = 'Bench'; cls = 'warn'; }
+    else if (ratio > 1.05) { status = 'Sobrecargado'; cls = 'bad'; }
+    else if (ratio >= 0.95) { status = 'Full'; cls = 'ok'; }
+    else { status = 'Parcial'; cls = 'ok'; }
+    return { ...p, assigned, ratio, status, cls };
+  });
+
+  const projectRows = proyectos.map(pr => {
+    const assigned = activeAssignments.filter(a => a.proyecto_id === pr.id).reduce((s, a) => s + Number(a.ded || 0), 0);
+    return { ...pr, assigned };
+  }).filter(x => x.assigned > 0);
+
+  return { peopleRows, projectRows, activeAssignments, projectsById };
+}
+function buildWeeklySeries(personas, asignaciones, numWeeks) {
+  const nowStart = isoWeekStart(new Date());
+  const weeks = [];
+  for (let i = numWeeks - 1; i >= 0; i--) {
+    const start = addDays(nowStart, -7 * i);
+    const end = addDays(start, 6);
+    const label = formatWeek(start);
+    const active = asignaciones.filter(a => overlapsWeek(a.desde, a.hasta, start, end));
+    const capacityFte = personas.reduce((s, p) => s + Number(p.fte || 0), 0);
+    const assignedFte = active.reduce((s, a) => s + Number(a.ded || 0), 0);
+    const freeFte = Math.max(0, capacityFte - assignedFte);
+    weeks.push({ label, capacityHours: capacityFte * 39, assignedHours: assignedFte * 39, freeHours: freeFte * 39 });
+  }
+  return weeks;
+}
+function setKpis(weeklySeries, peopleRows, proyectos) {
+  const current = weeklySeries[weeklySeries.length - 1] || { capacityHours:0, assignedHours:0, freeHours:0 };
+  const totalPeople = peopleRows.length;
+  const overloaded = peopleRows.filter(p => p.status === 'Sobrecargado').length;
+  const bench = peopleRows.filter(p => p.status === 'Bench').length;
+  const activeProjects = proyectos.filter(p => p.estado === 'Activo').length;
+  const full = peopleRows.filter(p => p.status === 'Full').length;
+
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="label">Capacidad actual</div><div class="value">${Math.round(current.capacityHours)}</div><div class="subv">horas/semana</div></div>
+    <div class="kpi"><div class="label">Asignado actual</div><div class="value">${Math.round(current.assignedHours)}</div><div class="subv">horas/semana</div></div>
+    <div class="kpi"><div class="label">Libre actual</div><div class="value">${Math.round(current.freeHours)}</div><div class="subv">horas/semana</div></div>
+    <div class="kpi"><div class="label">Personas</div><div class="value">${totalPeople}</div><div class="subv">${full} full · ${bench} bench</div></div>
+    <div class="kpi"><div class="label">Sobrecargados</div><div class="value">${overloaded}</div><div class="subv">> 100% asignación</div></div>
+    <div class="kpi"><div class="label">Proyectos activos</div><div class="value">${activeProjects}</div><div class="subv">sobre ${proyectos.length} totales</div></div>
+  `;
+}
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+}
+function renderCharts(personas, proyectos, asignaciones) {
+  const weeks = Number(document.getElementById('weeksBack').value || 12);
+  const weeklySeries = buildWeeklySeries(personas, asignaciones, weeks);
+  const cw = currentWeekWindow();
+  const { peopleRows, projectRows } = summarizeLoad(personas, asignaciones, proyectos, cw.start, cw.end);
+  setKpis(weeklySeries, peopleRows, proyectos);
+  document.getElementById('subtitle').textContent = `Ventana ${weeklySeries[0]?.label || ''} → ${weeklySeries[weeklySeries.length-1]?.label || ''} · semana actual ${cw.label}`;
+
+  const labels = weeklySeries.map(x => x.label);
+  destroyChart('capacityChart');
+  charts.capacityChart = new Chart(document.getElementById('capacityChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { type: 'line', label: 'Asignado', data: weeklySeries.map(x => x.assignedHours), borderColor: '#4c6fff', backgroundColor: '#4c6fff', pointRadius: 3, pointHoverRadius: 4, tension: 0.25, borderWidth: 2 },
+        { type: 'line', label: 'Libre', data: weeklySeries.map(x => x.freeHours), borderColor: '#ef4444', backgroundColor: '#ef4444', pointRadius: 3, pointHoverRadius: 4, tension: 0.25, borderWidth: 2 },
+        { type: 'bar', label: 'Capacidad', data: weeklySeries.map(x => x.capacityHours), backgroundColor: 'rgba(111,209,198,0.85)', borderColor: 'rgba(111,209,198,1)', borderWidth: 1 }
+      ]
+    },
+    options: baseOptions(false)
+  });
+
+  destroyChart('stackedChart');
+  charts.stackedChart = new Chart(document.getElementById('stackedChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Asignado', data: weeklySeries.map(x => x.assignedHours), backgroundColor: 'rgba(116,134,255,0.85)', borderColor: 'rgba(116,134,255,1)', borderWidth: 1, stack: 'a' },
+        { label: 'Libre', data: weeklySeries.map(x => x.freeHours), backgroundColor: 'rgba(111,209,198,0.85)', borderColor: 'rgba(111,209,198,1)', borderWidth: 1, stack: 'a' }
+      ]
+    },
+    options: baseOptions(true)
+  });
+
+  const loadCounts = {
+    Bench: peopleRows.filter(x => x.status === 'Bench').length,
+    Parcial: peopleRows.filter(x => x.status === 'Parcial').length,
+    Full: peopleRows.filter(x => x.status === 'Full').length,
+    Sobrecargado: peopleRows.filter(x => x.status === 'Sobrecargado').length,
+    'No disponible': peopleRows.filter(x => x.status === 'No disponible').length,
+  };
+  destroyChart('loadDonut');
+  charts.loadDonut = new Chart(document.getElementById('loadDonut'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(loadCounts), datasets: [{ data: Object.values(loadCounts), backgroundColor: ['#f59e0b','#60a5fa','#22c55e','#ef4444','#6b7280'] }] },
+    options: donutOptions()
+  });
+
+  const current = weeklySeries[weeklySeries.length - 1] || { assignedHours:0, freeHours:0 };
+  destroyChart('capacityDonut');
+  charts.capacityDonut = new Chart(document.getElementById('capacityDonut'), {
+    type: 'doughnut',
+    data: { labels: ['Asignado', 'Libre'], datasets: [{ data: [Math.round(current.assignedHours), Math.round(current.freeHours)], backgroundColor: ['#7486ff','#6fd1c6'] }] },
+    options: donutOptions()
+  });
+
+  const projCounts = {
+    Activo: proyectos.filter(x => x.estado === 'Activo').length,
+    Cerrado: proyectos.filter(x => x.estado === 'Cerrado').length,
+    Pipeline: proyectos.filter(x => x.estado === 'Pipeline').length,
+  };
+  destroyChart('projectDonut');
+  charts.projectDonut = new Chart(document.getElementById('projectDonut'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(projCounts), datasets: [{ data: Object.values(projCounts), backgroundColor: ['#22c55e','#64748b','#a855f7'] }] },
+    options: donutOptions()
+  });
+
+  document.getElementById('peopleTable').innerHTML = peopleRows
+    .sort((a,b) => b.ratio - a.ratio)
+    .slice(0,10)
+    .map(p => `<tr><td>${p.nombre}</td><td>${p.rol || '—'}</td><td class="mono">${(p.ratio*100).toFixed(0)}%</td><td class="${p.cls}">${p.status}</td></tr>`)
+    .join('') || '<tr><td colspan="4">Sin datos</td></tr>';
+
+  document.getElementById('projectsTable').innerHTML = projectRows
+    .sort((a,b) => b.assigned - a.assigned)
+    .slice(0,10)
+    .map(p => `<tr><td>${p.nombre}</td><td>${p.cliente || '—'}</td><td class="mono">${p.assigned.toFixed(2)}</td><td><span class="pill">${p.estado || '—'}</span></td></tr>`)
+    .join('') || '<tr><td colspan="4">Sin datos</td></tr>';
+}
+function baseOptions(stacked) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#cfd8ea', boxWidth: 18 } }
+    },
+    scales: {
+      x: { stacked, ticks: { color: '#97a1bd' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+      y: { stacked, beginAtZero: true, ticks: { color: '#97a1bd' }, grid: { color: 'rgba(255,255,255,0.06)' }, title: { display: true, text: 'Horas', color: '#97a1bd' } }
+    }
+  };
+}
+function donutOptions() {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { color: '#cfd8ea' } } },
+    cutout: '65%'
+  };
+}
+async function loadAll() {
+  const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: asignaciones, error: e3 }] = await Promise.all([
+    supabaseClient.from('personas').select('*').order('nombre'),
+    supabaseClient.from('proyectos').select('*').order('nombre'),
+    supabaseClient.from('asignaciones').select('*')
+  ]);
+  if (e1 || e2 || e3) throw (e1 || e2 || e3);
+  currentData = { personas: personas || [], proyectos: proyectos || [], asignaciones: asignaciones || [] };
+  renderCharts(currentData.personas, currentData.proyectos, currentData.asignaciones);
+}
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const msg = document.getElementById('loginMsg');
+  msg.textContent = 'Validando...';
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    msg.textContent = error.message;
+    return;
+  }
+  msg.textContent = '';
+  await initApp();
+}
+async function doLogout() {
+  await supabaseClient.auth.signOut();
+  document.getElementById('appView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+}
+async function initApp() {
+  const { data } = await supabaseClient.auth.getSession();
+  const session = data?.session;
+  if (!session) {
+    document.getElementById('appView').classList.add('hidden');
+    document.getElementById('loginView').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('appView').classList.remove('hidden');
+  await loadAll();
+}
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+document.getElementById('weeksBack').addEventListener('change', () => renderCharts(currentData.personas, currentData.proyectos, currentData.asignaciones));
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+  if (session) {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('appView').classList.remove('hidden');
+  }
+});
+
+initApp();
+</script>
+</body>
+</html>
