@@ -296,6 +296,7 @@
   <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button onclick="showTab('personas',this)">Personas</button>
   <button onclick="showTab('proyectos',this)">Proyectos</button>
+  <button onclick="showTab('demanda',this)">Demanda</button>
   <button onclick="showTab('asignaciones',this)">Asignaciones</button>
 </nav>
 
@@ -363,6 +364,29 @@
       <table>
         <thead><tr><th>Proyecto</th><th>Cliente</th><th>Inicio</th><th>Fin</th><th>Estado</th><th>FTEs asig.</th><th>Obs.</th><th>Acciones</th></tr></thead>
         <tbody id="proyectosTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+
+  <!-- ============ DEMANDA ============ -->
+  <div id="tab-demanda" class="tab-panel">
+    <div class="filters">
+      <input type="text" id="searchDemanda" placeholder="Buscar proyecto, semana o rol..." oninput="renderDemanda()">
+      <select id="filterDemandaProyecto" onchange="renderDemanda()"><option value="">Todos los proyectos</option></select>
+      <select id="filterDemandaRol" onchange="renderDemanda()">
+        <option value="">Todos los roles</option>
+        <option>Arquitecto Cloud</option>
+        <option>Consultor Senior</option>
+        <option>Ingeniero Cloud</option>
+        <option>Otro</option>
+      </select>
+      <button class="btn primary" onclick="openAddDemanda()">+ Añadir demanda</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Proyecto</th><th>Cliente</th><th>Semana</th><th>Rol</th><th>Seniority</th><th>Demanda FTE</th><th>Obs.</th><th>Acciones</th></tr></thead>
+        <tbody id="demandaTable"></tbody>
       </table>
     </div>
   </div>
@@ -437,6 +461,44 @@
   </div>
 </div>
 
+
+<!-- MODAL DEMANDA -->
+<div class="modal-overlay" id="modalDemanda">
+  <div class="modal">
+    <h3 id="modalDemandaTitle">Añadir demanda</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Proyecto *</label><select id="dProyecto"></select></div>
+      <div class="form-group"><label>Semana *</label><input type="week" id="dSemana"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Rol *</label>
+        <select id="dRol">
+          <option>Arquitecto Cloud</option>
+          <option>Consultor Senior</option>
+          <option>Ingeniero Cloud</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Seniority</label>
+        <select id="dSeniority">
+          <option value="">—</option>
+          <option>Senior</option>
+          <option>Mid</option>
+          <option>Junior</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Demanda FTE *</label><input type="number" id="dFte" min="0" max="10" step="0.1" value="1"></div>
+      <div class="form-group"><label>Observaciones</label><input type="text" id="dObs" placeholder="Ej: punta de carga, preventa, etc."></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modalDemanda')">Cancelar</button>
+      <button class="btn primary" onclick="saveDemanda()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL ASIGNACION -->
 <div class="modal-overlay" id="modalAsignacion">
   <div class="modal">
@@ -464,8 +526,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://xbhvzmjxrzuwwaxugeay.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_NrnjvJoxp82CG0E_TwQlmQ_tspQDN0J";
+const SUPABASE_URL = "PEGA_AQUI_TU_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function login() {
@@ -615,6 +677,7 @@ const INITIAL_DATA = {
     {id:'pr51', nombre:'Google certification', cliente:'Evolutio', inicio:'2025-05-22', fin:'2025-12-31', estado:'Activo', obs:''},
     {id:'pr52', nombre:'Proyecto Ansible CTTI', cliente:'CTTI', inicio:'2025-11-17', fin:'2025-12-31', estado:'Activo', obs:''},
   ],
+  demanda: [],
   asignaciones: [
     {id:'a1', persona:'Abel Carvajal', proyecto:'Oficina Cloud', rol:'SRE', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
     {id:'a2', persona:'Abel Rodriguez', proyecto:'OT Wizink', rol:'', ded:1, desde:'2025-01-01', hasta:'2025-12-30'},
@@ -693,6 +756,7 @@ const INITIAL_DATA = {
 let state = loadState();
 let editingPersonaId = null;
 let editingProyectoId = null;
+let editingDemandaId = null;
 let editingAsigId = null;
 let selectedPersonaForAsignacion = null;
 let isSupabaseLoaded = false;
@@ -700,9 +764,13 @@ let isSupabaseLoaded = false;
 function loadState() {
   try {
     const s = localStorage.getItem('sd_cloud_v2');
-    return s ? JSON.parse(s) : JSON.parse(JSON.stringify(INITIAL_DATA));
+    const data = s ? JSON.parse(s) : JSON.parse(JSON.stringify(INITIAL_DATA));
+    if (!data.demanda) data.demanda = [];
+    return data;
   } catch(e) {
-    return JSON.parse(JSON.stringify(INITIAL_DATA));
+    const data = JSON.parse(JSON.stringify(INITIAL_DATA));
+    if (!data.demanda) data.demanda = [];
+    return data;
   }
 }
 function saveState() {
@@ -734,14 +802,15 @@ async function loadStateFromSupabase(showMsg = false) {
     return;
   }
 
-  const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: asignaciones, error: e3 }] = await Promise.all([
+  const [{ data: personas, error: e1 }, { data: proyectos, error: e2 }, { data: demanda, error: e4 }, { data: asignaciones, error: e3 }] = await Promise.all([
     supabaseClient.from('personas').select('*').order('nombre'),
     supabaseClient.from('proyectos').select('*').order('nombre'),
+    supabaseClient.from('demanda_semanal').select('*').order('semana'),
     supabaseClient.from('asignaciones').select('*').order('id')
   ]);
 
-  if (e1 || e2 || e3) {
-    console.error('Supabase load error', e1 || e2 || e3);
+  if (e1 || e2 || e3 || e4) {
+    console.error('Supabase load error', e1 || e2 || e3 || e4);
     alert('Error cargando desde Supabase. Revisa URL, key, tablas y policies.');
     return;
   }
@@ -757,6 +826,17 @@ async function loadStateFromSupabase(showMsg = false) {
     proyectos: (proyectos || []).map(p => ({
       id: p.id, nombre: p.nombre, cliente: p.cliente || '', inicio: p.inicio || '', fin: p.fin || '', estado: p.estado || 'Activo', obs: p.obs || ''
     })),
+    demanda: (demanda || []).map(d => ({
+      id: d.id,
+      proyecto_id: d.proyecto_id,
+      proyecto: proyectosById[d.proyecto_id]?.nombre || '',
+      cliente: proyectosById[d.proyecto_id]?.cliente || '',
+      semana: d.semana || '',
+      rol: d.rol || '',
+      seniority: d.seniority || '',
+      demanda_fte: Number(d.demanda_fte || 0),
+      obs: d.obs || ''
+    })).filter(d => d.proyecto),
     asignaciones: (asignaciones || []).map(a => ({
       id: a.id,
       persona: personasById[a.persona_id]?.nombre || '',
@@ -796,6 +876,16 @@ async function saveToSupabase() {
     const personaIdByName = Object.fromEntries(state.personas.map(p => [p.nombre, p.id]));
     const proyectoIdByName = Object.fromEntries(state.proyectos.map(p => [p.nombre, p.id]));
 
+    const demandaRows = (state.demanda || []).map(d => ({
+      id: d.id,
+      proyecto_id: d.proyecto_id || proyectoIdByName[d.proyecto],
+      semana: d.semana || null,
+      rol: d.rol || '',
+      seniority: d.seniority || null,
+      demanda_fte: Number(d.demanda_fte || 0),
+      obs: d.obs || ''
+    })).filter(d => d.proyecto_id && d.semana && d.rol);
+
     const asignacionesRows = state.asignaciones.map(a => ({
       id: a.id,
       persona_id: personaIdByName[a.persona],
@@ -808,6 +898,7 @@ async function saveToSupabase() {
 
     const personaIds = personasRows.map(x => x.id);
     const proyectoIds = proyectosRows.map(x => x.id);
+    const demandaIds = demandaRows.map(x => x.id);
     const asignacionIds = asignacionesRows.map(x => x.id);
 
     let res;
@@ -822,6 +913,16 @@ async function saveToSupabase() {
     if (res.error) throw res.error;
     if (proyectoIds.length) {
       res = await supabaseClient.from('proyectos').delete().not('id', 'in', '(' + proyectoIds.map(v => `"${v}"`).join(',') + ')');
+      if (res.error) throw res.error;
+    }
+
+    res = await supabaseClient.from('demanda_semanal').upsert(demandaRows, { onConflict: 'id' });
+    if (res.error) throw res.error;
+    if (demandaIds.length) {
+      res = await supabaseClient.from('demanda_semanal').delete().not('id', 'in', '(' + demandaIds.map(v => `"${v}"`).join(',') + ')');
+      if (res.error) throw res.error;
+    } else {
+      res = await supabaseClient.from('demanda_semanal').delete().not('id', 'is', null);
       if (res.error) throw res.error;
     }
 
@@ -1180,6 +1281,158 @@ function deleteProyecto(id) {
 // ============================================================
 // ASIGNACIONES
 // ============================================================
+
+function normalizeWeek(value) {
+  return (value || '').trim();
+}
+
+function populateDemandaSelects() {
+  const filterProyecto = document.getElementById('filterDemandaProyecto');
+  const currentProyecto = filterProyecto ? filterProyecto.value : '';
+  if (filterProyecto) {
+    filterProyecto.innerHTML = '<option value="">Todos los proyectos</option>' + state.proyectos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+    filterProyecto.value = currentProyecto;
+  }
+  const dProyecto = document.getElementById('dProyecto');
+  if (dProyecto) {
+    dProyecto.innerHTML = state.proyectos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  }
+}
+
+function renderDemanda() {
+  populateDemandaSelects();
+  const search = (document.getElementById('searchDemanda')?.value || '').toLowerCase();
+  const fProyecto = document.getElementById('filterDemandaProyecto')?.value || '';
+  const fRol = document.getElementById('filterDemandaRol')?.value || '';
+
+  let rows = (state.demanda || []).filter(d => {
+    if (search && !(`${d.proyecto} ${d.cliente} ${d.semana} ${d.rol} ${d.seniority} ${d.obs}`.toLowerCase().includes(search))) return false;
+    if (fProyecto && d.proyecto !== fProyecto) return false;
+    if (fRol && d.rol !== fRol) return false;
+    return true;
+  });
+
+  rows.sort((a,b) => {
+    const s = (a.semana || '').localeCompare(b.semana || '');
+    if (s !== 0) return s;
+    return (a.proyecto || '').localeCompare(b.proyecto || '');
+  });
+
+  const tb = document.getElementById('demandaTable');
+  if (!tb) return;
+  if (!rows.length) {
+    tb.innerHTML = '<tr class="empty-row"><td colspan="8">Sin demanda cargada</td></tr>';
+    return;
+  }
+
+  tb.innerHTML = rows.map(d => `
+    <tr>
+      <td><strong>${d.proyecto}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${d.cliente || '—'}</td>
+      <td><span class="badge blue">${d.semana || '—'}</span></td>
+      <td><span class="badge gray">${d.rol || '—'}</span></td>
+      <td><span class="badge ${d.seniority==='Senior'?'blue':d.seniority==='Mid'?'amber':d.seniority==='Junior'?'gray':'gray'}">${d.seniority || '—'}</span></td>
+      <td style="font-family:var(--mono);font-size:12px">${Number(d.demanda_fte || 0).toFixed(2)}</td>
+      <td style="font-size:11px;color:var(--text2)">${d.obs || '—'}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn small" onclick="editDemanda('${d.id}')">✏</button>
+          <button class="btn small danger" onclick="deleteDemanda('${d.id}')">✕</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddDemanda() {
+  editingDemandaId = null;
+  populateDemandaSelects();
+  document.getElementById('modalDemandaTitle').textContent = 'Añadir demanda';
+  if (state.proyectos[0]) document.getElementById('dProyecto').value = state.proyectos[0].id;
+  document.getElementById('dSemana').value = '';
+  document.getElementById('dRol').value = 'Arquitecto Cloud';
+  document.getElementById('dSeniority').value = '';
+  document.getElementById('dFte').value = '1';
+  document.getElementById('dObs').value = '';
+  document.getElementById('modalDemanda').classList.add('open');
+}
+
+function editDemanda(id) {
+  const d = (state.demanda || []).find(x => x.id === id);
+  if (!d) return;
+  editingDemandaId = id;
+  populateDemandaSelects();
+  document.getElementById('modalDemandaTitle').textContent = 'Editar demanda';
+  document.getElementById('dProyecto').value = d.proyecto_id || (state.proyectos.find(p => p.nombre === d.proyecto)?.id || '');
+  document.getElementById('dSemana').value = d.semana || '';
+  document.getElementById('dRol').value = d.rol || 'Arquitecto Cloud';
+  document.getElementById('dSeniority').value = d.seniority || '';
+  document.getElementById('dFte').value = String(d.demanda_fte ?? 1);
+  document.getElementById('dObs').value = d.obs || '';
+  document.getElementById('modalDemanda').classList.add('open');
+}
+
+function saveDemanda() {
+  const proyectoId = document.getElementById('dProyecto').value;
+  const proyectoObj = state.proyectos.find(p => p.id === proyectoId);
+  const semana = normalizeWeek(document.getElementById('dSemana').value);
+  const rol = document.getElementById('dRol').value;
+  const seniority = document.getElementById('dSeniority').value;
+  const demandaFte = parseFloat(document.getElementById('dFte').value);
+  const obs = document.getElementById('dObs').value.trim();
+
+  if (!proyectoObj) { alert('Selecciona un proyecto válido'); return; }
+  if (!semana) { alert('La semana es obligatoria'); return; }
+  if (!rol) { alert('El rol es obligatorio'); return; }
+  if (isNaN(demandaFte) || demandaFte < 0) { alert('La demanda FTE debe ser 0 o mayor'); return; }
+
+  const duplicada = (state.demanda || []).some(d =>
+    d.id !== editingDemandaId &&
+    d.proyecto_id === proyectoObj.id &&
+    d.semana === semana &&
+    d.rol === rol &&
+    (d.seniority || '') === (seniority || '')
+  );
+  if (duplicada) {
+    alert('Ya existe una demanda para ese proyecto, semana, rol y seniority.');
+    return;
+  }
+
+  const obj = {
+    proyecto_id: proyectoObj.id,
+    proyecto: proyectoObj.nombre,
+    cliente: proyectoObj.cliente || '',
+    semana,
+    rol,
+    seniority,
+    demanda_fte: demandaFte,
+    obs
+  };
+
+  if (editingDemandaId) {
+    const i = state.demanda.findIndex(d => d.id === editingDemandaId);
+    state.demanda[i] = { ...state.demanda[i], ...obj };
+    showToast('Demanda actualizada ✓');
+  } else {
+    state.demanda.push({ id: uid(), ...obj });
+    showToast('Demanda añadida ✓');
+  }
+
+  saveState();
+  closeModal('modalDemanda');
+  renderAll();
+}
+
+function deleteDemanda(id) {
+  const d = (state.demanda || []).find(x => x.id === id);
+  if (!d) return;
+  if (!confirm(`¿Eliminar demanda de "${d.proyecto}" (${d.semana} · ${d.rol})?`)) return;
+  state.demanda = state.demanda.filter(x => x.id !== id);
+  saveState();
+  renderAll();
+  showToast('Demanda eliminada ✓');
+}
+
 function populateAsigSelects() {
   const selP = document.getElementById('filterPersonaAsig');
   const selPr = document.getElementById('filterProyectoAsig');
@@ -1358,6 +1611,7 @@ function renderAll() {
   renderDashboard();
   renderPersonas();
   renderProyectos();
+  renderDemanda();
   renderAsignaciones();
   updateLastUpdateLabel();
 }
