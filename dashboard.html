@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Supply & Demand</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#252a38;--border2:#2e3548;--text:#c8cedd;--text2:#8d95ac;--text3:#5a6279;--accent:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--mono:'IBM Plex Mono', monospace;--sans:'IBM Plex Sans', system-ui, sans-serif}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
+    header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:30}
+    .brand{display:flex;gap:12px;align-items:center}.logo{width:34px;height:34px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+    h1{margin:0;font-size:16px}.sub{font-size:12px;color:var(--text2);margin-top:2px}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px}.btn:hover{border-color:var(--accent);color:var(--accent)} .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+    .pill{padding:6px 10px;border:1px solid var(--border2);border-radius:999px;font-size:12px;color:var(--text2)}
+    .content{padding:22px;max-width:1800px;margin:0 auto}.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px}.login-card{width:100%;max-width:380px}.grid{display:grid;gap:14px}
+    input,select{width:100%;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:10px 12px;border-radius:8px;outline:none}
+    #errorBox{display:none;margin-top:12px;padding:10px 12px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#ffb4b4;border-radius:8px;font-size:12px} #app{display:none}
+    .tabs{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}.tab-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);padding:10px 14px;border-radius:10px;cursor:pointer}.tab-btn.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:#dbeafe}
+    .tab-panel{display:none}.tab-panel.active{display:block}.kpis{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px}
+    .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px}.kpi .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}.kpi .value{font-family:var(--mono);font-size:28px;font-weight:700}.kpi .subv{font-size:11px;color:var(--text3);margin-top:5px}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.panel{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px}
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}.title{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);font-weight:700}
+    .table-wrap,.heatmap-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+    table{width:100%;border-collapse:collapse} th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);background:var(--bg3);position:sticky;top:0}
+    .small{font-size:11px;color:var(--text2)} .good{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
+    .filters,.demand-filters{display:grid;gap:10px;margin-bottom:14px}.filters{grid-template-columns:repeat(4,minmax(0,1fr))}.demand-filters{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .tag{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border2);color:var(--text2)}
+    .timeline-table th.person,.timeline-table td.person{position:sticky;left:0;z-index:3;background:var(--bg2);min-width:220px;max-width:220px}
+    .timeline-table th.person2,.timeline-table td.person2{position:sticky;left:220px;z-index:3;background:var(--bg2);min-width:160px;max-width:160px}
+    .timeline-table th.person3,.timeline-table td.person3{position:sticky;left:380px;z-index:3;background:var(--bg2);min-width:110px;max-width:110px}
+    .timeline-table th.person.header-sticky,.timeline-table th.person2.header-sticky,.timeline-table th.person3.header-sticky{background:var(--bg3)}
+    .week-cell{min-width:84px;text-align:center;font-family:var(--mono);font-size:12px}
+    .load-free{background:rgba(34,197,94,.12);color:#b8ffd0}.load-partial{background:rgba(245,158,11,.12);color:#ffd89c}.load-full{background:rgba(59,130,246,.12);color:#b6d3ff}.load-over{background:rgba(239,68,68,.12);color:#ffb4b4}.load-inactive{background:rgba(100,116,139,.15);color:#c9d2df}
+    #toast{position:fixed;bottom:22px;right:22px;background:var(--bg3);border:1px solid var(--border2);padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s} #toast.show{opacity:1}
+    canvas{max-height:320px}@media (max-width:1100px){.two-col,.three-col{grid-template-columns:1fr}.filters,.demand-filters{grid-template-columns:1fr 1fr}} @media (max-width:700px){.content{padding:14px}.filters,.demand-filters{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login-wrap">
+    <div class="card login-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div class="logo">DB</div><div><h1>Dashboard Supply & Demand</h1><div class="sub">Acceso autenticado</div></div></div>
+      <div class="grid">
+        <div><label>Email</label><input id="loginEmail" type="email" placeholder="tu@empresa.com" /></div>
+        <div><label>Contraseña</label><input id="loginPassword" type="password" placeholder="••••••••" /></div>
+        <button class="btn primary" id="loginBtn">Entrar</button>
+        <div class="small" id="loginStatus">Esperando credenciales…</div>
+        <div id="errorBox"></div>
+      </div>
+    </div>
+  </div>
+  <div id="app">
+    <header>
+      <div class="brand"><div class="logo">DB</div><div><h1>Dashboard Supply & Demand</h1><div class="sub">Resumen · Liberación · Demanda</div></div></div>
+      <div class="actions"><span class="pill" id="userBadge">—</span><button class="btn" id="refreshBtn">Recargar</button><button class="btn" id="logoutBtn">Cerrar sesión</button></div>
+    </header>
+    <div class="content">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="resumen">Resumen</button>
+        <button class="tab-btn" data-tab="liberacion">Liberación</button>
+        <button class="tab-btn" data-tab="demanda">Demanda</button>
+      </div>
+      <div id="tab-resumen" class="tab-panel active">
+        <div class="kpis" id="kpiGrid"></div>
+        <div class="three-col">
+          <div class="panel"><div class="section-header"><div class="title">Capacidad vs asignado vs libre</div></div><canvas id="capacidadChart"></canvas></div>
+          <div class="panel"><div class="section-header"><div class="title">Personas por rol</div></div><canvas id="rolesChart"></canvas></div>
+          <div class="panel"><div class="section-header"><div class="title">Proyectos por estado</div></div><canvas id="proyectosChart"></canvas></div>
+        </div>
+        <div class="two-col" style="margin-top:18px">
+          <div class="panel"><div class="section-header"><div class="title">Top personas por carga actual</div></div><div class="table-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>Asignado</th><th>Libre</th></tr></thead><tbody id="topPersonasTable"></tbody></table></div></div>
+          <div class="panel"><div class="section-header"><div class="title">Top proyectos por FTE actual</div></div><div class="table-wrap"><table><thead><tr><th>Proyecto</th><th>Cliente</th><th>FTE</th></tr></thead><tbody id="topProyectosTable"></tbody></table></div></div>
+        </div>
+      </div>
+      <div id="tab-liberacion" class="tab-panel">
+        <div class="filters">
+          <div class="panel"><label>Horizonte</label><select id="weeksSelect"><option value="8">8 semanas</option><option value="12" selected>12 semanas</option><option value="16">16 semanas</option><option value="24">24 semanas</option></select></div>
+          <div class="panel"><label>Rol</label><select id="roleFilter"><option value="">Todos</option></select></div>
+          <div class="panel"><label>Búsqueda persona</label><input id="searchPerson" type="text" placeholder="Nombre..." /></div>
+          <div class="panel"><label>Visibilidad</label><select id="availabilityFilter"><option value="">Todos</option><option value="free_soon">Se libera en horizonte</option><option value="now_free">Libre ahora</option><option value="busy">Sin hueco en horizonte</option><option value="over">Sobrecargado</option></select></div>
+        </div>
+        <div class="two-col">
+          <div class="panel"><div class="section-header"><div class="title">Timeline semanal por persona</div><div class="small">Verde libre · Amarillo parcial · Azul completo · Rojo sobrecarga · Gris no disponible</div></div><div class="heatmap-wrap"><table class="timeline-table" id="timelineTable"></table></div></div>
+          <div class="panel">
+            <div class="section-header"><div class="title">Próximas liberaciones</div><div class="small">Primera semana con hueco ≥ 0,2 FTE</div></div>
+            <div class="table-wrap"><table><thead><tr><th>Persona</th><th>Rol</th><th>Primera semana</th><th>Hueco</th></tr></thead><tbody id="releaseTable"></tbody></table></div>
+            <div style="margin-top:18px"><div class="section-header"><div class="title">Disponibilidad por rol</div></div><div class="table-wrap"><table><thead><tr><th>Rol</th><th>Capacidad</th><th>Libre ahora</th><th>Se libera &lt; 4 sem</th></tr></thead><tbody id="roleTable"></tbody></table></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="tab-demanda" class="tab-panel">
+        <div class="demand-filters">
+          <div class="panel"><label>Horizonte demanda</label><select id="demandHorizon"><option value="current">Semana actual</option><option value="4">Próximas 4 semanas</option><option value="8" selected>Próximas 8 semanas</option><option value="12">Próximas 12 semanas</option><option value="all_future">Todo futuro</option></select></div>
+          <div class="panel"><label>Estado de proyecto</label><select id="demandProjectState"><option value="">Todos</option><option value="Pipeline">Solo Pipeline</option><option value="Activo">Solo Activo</option><option value="Cerrado">Solo Cerrado</option></select></div>
+          <div class="panel"><label>Cliente / proyecto</label><input id="demandSearch" type="text" placeholder="Buscar..." /></div>
+        </div>
+        <div class="kpis" id="demandaKpis"></div>
+        <div class="two-col">
+          <div class="panel"><div class="section-header"><div class="title">Demanda por rol</div></div><canvas id="demandaRolChart"></canvas></div>
+          <div class="panel"><div class="section-header"><div class="title">Gap por rol</div></div><canvas id="gapRolChart"></canvas></div>
+        </div>
+        <div class="two-col" style="margin-top:18px">
+          <div class="panel"><div class="section-header"><div class="title">Top proyectos con demanda</div></div><div class="table-wrap"><table><thead><tr><th>Proyecto</th><th>Estado</th><th>Semana(s)</th><th>Demanda</th></tr></thead><tbody id="demandaProyectoTable"></tbody></table></div></div>
+          <div class="panel"><div class="section-header"><div class="title">Top gaps por rol</div></div><div class="table-wrap"><table><thead><tr><th>Rol</th><th>Demanda</th><th>Asignado aprox.</th><th>Gap</th></tr></thead><tbody id="gapRolTable"></tbody></table></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+<script>
+const SUPABASE_URL = "PEGA_AQUI_TU_SUPABASE_URL";
+const SUPABASE_PUBLISHABLE_KEY = "PEGA_AQUI_TU_SUPABASE_PUBLISHABLE_KEY";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let state = { personas: [], proyectos: [], asignaciones: [], demanda: [] };
+let charts = {};
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function showError(msg){ const box=document.getElementById('errorBox'); box.style.display='block'; box.textContent=msg; }
+function clearError(){ const box=document.getElementById('errorBox'); box.style.display='none'; box.textContent=''; }
+function parseDate(s){ if(!s) return null; const d=new Date(s); if(isNaN(d)) return null; d.setHours(0,0,0,0); return d; }
+function mondayOfCurrentWeek(d=new Date()){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setHours(0,0,0,0); x.setDate(x.getDate()-day); return x; }
+function addDays(d,days){ const x=new Date(d); x.setDate(x.getDate()+days); return x; }
+function getISOWeek(date){ const d=new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())); const dayNum=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-dayNum); const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1)); const weekNo=Math.ceil((((d-yearStart)/86400000)+1)/7); return { year:d.getUTCFullYear(), week:weekNo }; }
+function weekIsoFromDate(date){ const m=getISOWeek(date); return `${m.year}-W${String(m.week).padStart(2,'0')}`; }
+function formatWeekLabel(start){ const wn=getISOWeek(start); return `W${String(wn.week).padStart(2,'0')} · ${String(start.getDate()).padStart(2,'0')}/${String(start.getMonth()+1).padStart(2,'0')}`; }
+function overlapsWeek(asig, weekStart, weekEnd){ const desde=parseDate(asig.desde), hasta=parseDate(asig.hasta); if(!desde||!hasta) return false; return desde<=weekEnd && hasta>=weekStart; }
+async function login(email,password){ const status=document.getElementById('loginStatus'); status.textContent='Entrando…'; clearError(); const { error } = await supabaseClient.auth.signInWithPassword({ email, password }); if(error){ status.textContent='No se pudo entrar'; showError(error.message); return false; } status.textContent='Sesión iniciada'; return true; }
+async function logout(){ await supabaseClient.auth.signOut(); location.reload(); }
+async function ensureSession(){ const { data, error } = await supabaseClient.auth.getSession(); if(error){ showError(error.message); return null; } return data.session; }
+async function loadData(){ const [{data:personas,error:e1},{data:proyectos,error:e2},{data:asignacionesRaw,error:e3},{data:demandaRaw,error:e4}] = await Promise.all([ supabaseClient.from('personas').select('*').order('nombre'), supabaseClient.from('proyectos').select('*').order('nombre'), supabaseClient.from('asignaciones').select('id, rol, ded, desde, hasta, personas:persona_id ( id, nombre, rol, seniority, fte ), proyectos:proyecto_id ( id, nombre, cliente, estado )'), supabaseClient.from('demanda_semanal').select('id, semana, rol, seniority, demanda_fte, obs, proyectos:proyecto_id ( id, nombre, cliente, estado )') ]); if(e1||e2||e3||e4) throw new Error((e1||e2||e3||e4).message); state.personas = personas || []; state.proyectos = proyectos || []; state.asignaciones = (asignacionesRaw || []).map(a=>({id:a.id, persona_id:a.personas?.id||'', persona:a.personas?.nombre||'', proyecto_id:a.proyectos?.id||'', proyecto:a.proyectos?.nombre||'', cliente:a.proyectos?.cliente||'', proyecto_estado:a.proyectos?.estado||'', rol:a.rol||'', ded:Number(a.ded||0), desde:a.desde, hasta:a.hasta})); state.demanda = (demandaRaw || []).map(d=>({id:d.id, semana:d.semana, rol:d.rol||'', seniority:d.seniority||'', demanda_fte:Number(d.demanda_fte||0), obs:d.obs||'', proyecto_id:d.proyectos?.id||'', proyecto:d.proyectos?.nombre||'', cliente:d.proyectos?.cliente||'', proyecto_estado:d.proyectos?.estado||''})); }
+function currentWeekMeta(){ return weekIsoFromDate(mondayOfCurrentWeek()); }
+function currentWeeks(){ const count=Number(document.getElementById('weeksSelect').value||12); const start=mondayOfCurrentWeek(); const weeks=[]; for(let i=0;i<count;i++){ const ws=addDays(start,i*7); weeks.push({start:ws,end:addDays(ws,6),label:formatWeekLabel(ws),iso:weekIsoFromDate(ws)}); } return weeks; }
+function nowLoadByPerson(person){ const ws=mondayOfCurrentWeek(), we=addDays(ws,6); const assigned=state.asignaciones.filter(a=>a.persona_id===person.id && overlapsWeek(a,ws,we)).reduce((s,a)=>s+Number(a.ded||0),0); return {assigned, free:Math.max(0,Number(person.fte||0)-assigned), fte:Number(person.fte||0)}; }
+function projectLoadNow(){ const ws=mondayOfCurrentWeek(), we=addDays(ws,6), m={}; state.asignaciones.forEach(a=>{ if(!overlapsWeek(a,ws,we)) return; const key=a.proyecto||'Sin proyecto'; m[key]=(m[key]||0)+Number(a.ded||0); }); return Object.entries(m).map(([proyecto,fte])=>({proyecto,fte})).sort((a,b)=>b.fte-a.fte); }
+function assignedApproxByRoleCurrent(){ const ws=mondayOfCurrentWeek(), we=addDays(ws,6), map={}; state.asignaciones.forEach(a=>{ if(!overlapsWeek(a,ws,we)) return; const person=state.personas.find(p=>p.id===a.persona_id); const role=person?.rol||'Sin rol'; map[role]=(map[role]||0)+Number(a.ded||0); }); return map; }
+function getDemandWeeksByHorizon(){ const mode=document.getElementById('demandHorizon').value, start=mondayOfCurrentWeek(); if(mode==='current') return [currentWeekMeta()]; if(mode==='all_future'){ const weeks=[...new Set(state.demanda.map(d=>d.semana).filter(Boolean))].sort(); return weeks.filter(w=>w>=currentWeekMeta()); } const count=Number(mode||8), out=[]; for(let i=0;i<count;i++) out.push(weekIsoFromDate(addDays(start,i*7))); return out; }
+function filteredDemand(){ const weeks=new Set(getDemandWeeksByHorizon()); const stateFilter=document.getElementById('demandProjectState').value; const search=document.getElementById('demandSearch').value.trim().toLowerCase(); return state.demanda.filter(d=>{ if(!weeks.has(d.semana)) return false; if(stateFilter && d.proyecto_estado!==stateFilter) return false; if(search){ const hay=[d.proyecto,d.cliente,d.rol,d.semana].filter(Boolean).join(' ').toLowerCase(); if(!hay.includes(search)) return false; } return true; }); }
+function renderSummary(){ const totalCap=state.personas.reduce((s,p)=>s+Number(p.fte||0),0); const loads=state.personas.map(p=>nowLoadByPerson(p)); const totalAssigned=loads.reduce((s,x)=>s+x.assigned,0); const totalFree=loads.reduce((s,x)=>s+x.free,0); const libres=loads.filter(x=>x.fte>0 && x.assigned===0).length; const parciales=loads.filter(x=>x.fte>0 && x.assigned>0 && x.assigned<x.fte).length; const completos=loads.filter(x=>x.fte>0 && x.assigned>=x.fte && x.assigned<=x.fte+0.001).length; const sobre=loads.filter(x=>x.fte>0 && x.assigned>x.fte+0.001).length; const demandaActual=state.demanda.filter(d=>d.semana===currentWeekMeta()).reduce((s,d)=>s+Number(d.demanda_fte||0),0); const gap=demandaActual-totalAssigned; document.getElementById('kpiGrid').innerHTML = `<div class="kpi"><div class="label">Capacidad total</div><div class="value">${totalCap.toFixed(1)} FTE</div><div class="subv">Equipo disponible</div></div><div class="kpi"><div class="label">Asignado ahora</div><div class="value">${totalAssigned.toFixed(1)} FTE</div><div class="subv">Semana actual</div></div><div class="kpi"><div class="label">Libre ahora</div><div class="value good">${totalFree.toFixed(1)} FTE</div><div class="subv">Hueco inmediato</div></div><div class="kpi"><div class="label">Demanda actual</div><div class="value warn">${demandaActual.toFixed(1)} FTE</div><div class="subv">Semana actual</div></div><div class="kpi"><div class="label">Gap demanda actual</div><div class="value ${gap>0?'bad':'good'}">${gap.toFixed(1)} FTE</div><div class="subv">Demanda - asignado</div></div><div class="kpi"><div class="label">Personas libres</div><div class="value">${libres}</div><div class="subv">${parciales} parciales · ${completos} completas · ${sobre} sobre</div></div>`; makeChart('capacidadChart','bar',{labels:['Actual'],datasets:[{label:'Capacidad',data:[totalCap]},{label:'Asignado',data:[totalAssigned]},{label:'Libre',data:[totalFree]}]}); const roleCounts={}; state.personas.forEach(p=>roleCounts[p.rol||'Sin rol']=(roleCounts[p.rol||'Sin rol']||0)+1); makeChart('rolesChart','doughnut',{labels:Object.keys(roleCounts),datasets:[{data:Object.values(roleCounts)}]}); const projectStates={}; state.proyectos.forEach(p=>projectStates[p.estado||'Sin estado']=(projectStates[p.estado||'Sin estado']||0)+1); makeChart('proyectosChart','doughnut',{labels:Object.keys(projectStates),datasets:[{data:Object.values(projectStates)}]}); const topP=state.personas.map(p=>({nombre:p.nombre, rol:p.rol||'—', ...nowLoadByPerson(p)})).sort((a,b)=>b.assigned-a.assigned).slice(0,10); document.getElementById('topPersonasTable').innerHTML=topP.map(r=>`<tr><td><strong>${r.nombre}</strong></td><td>${r.rol}</td><td>${r.assigned.toFixed(1)} FTE</td><td class="${r.free>0?'good':''}">${r.free.toFixed(1)} FTE</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>'; const topProj=projectLoadNow().slice(0,10); document.getElementById('topProyectosTable').innerHTML=topProj.map(r=>{ const proj=state.proyectos.find(p=>p.nombre===r.proyecto); return `<tr><td><strong>${r.proyecto}</strong></td><td>${proj?.cliente||'—'}</td><td>${r.fte.toFixed(1)} FTE</td></tr>`; }).join('') || '<tr><td colspan="3">Sin datos</td></tr>'; }
+function loadForPersonWeek(person,week){ const personAsigs=state.asignaciones.filter(a=>a.persona_id===person.id); let assigned=0; const activeProjects=[]; for(const a of personAsigs){ if(overlapsWeek(a,week.start,week.end)){ assigned+=Number(a.ded||0); if(a.proyecto && !activeProjects.includes(a.proyecto)) activeProjects.push(a.proyecto); } } const fte=Number(person.fte||0), free=Math.max(0, fte-assigned); return {assigned, free, fte, projects:activeProjects}; }
+function classifyCell(load){ if(load.fte<=0) return 'load-inactive'; const ratio=load.assigned/load.fte; if(load.assigned===0) return 'load-free'; if(ratio<0.8) return 'load-partial'; if(ratio<=1.0) return 'load-full'; return 'load-over'; }
+function personSummary(person,weeks){ const entries=weeks.map(w=>loadForPersonWeek(person,w)); const firstFree=entries.findIndex(x=>x.fte>0 && x.free>=0.2); const overloaded=entries.some(x=>x.fte>0 && x.assigned>x.fte+0.001); const now=entries[0] || {free:0,assigned:0,fte:0}; return {entries, firstFree, overloaded, now}; }
+function applyFilters(persons,weeks){ const role=document.getElementById('roleFilter').value, search=document.getElementById('searchPerson').value.trim().toLowerCase(), avail=document.getElementById('availabilityFilter').value; return persons.filter(p=>{ if(role && p.rol!==role) return false; if(search && !p.nombre.toLowerCase().includes(search)) return false; if(avail){ const s=personSummary(p,weeks); if(avail==='free_soon' && s.firstFree===-1) return false; if(avail==='now_free' && !(s.now.fte>0 && s.now.assigned===0)) return false; if(avail==='busy' && s.firstFree!==-1) return false; if(avail==='over' && !s.overloaded) return false; } return true; }); }
+function renderLiberacion(){ const roles=[...new Set(state.personas.map(p=>p.rol).filter(Boolean))].sort(); const sel=document.getElementById('roleFilter'), cur=sel.value; sel.innerHTML=`<option value="">Todos</option>` + roles.map(r=>`<option value="${r}">${r}</option>`).join(''); sel.value=cur; const weeks=currentWeeks(), persons=applyFilters(state.personas,weeks); const headWeeks=weeks.map(w=>`<th class="header-sticky week-cell">${w.label}</th>`).join(''); const body=persons.map(p=>{ const summary=personSummary(p,weeks), nowProjects=summary.entries[0]?.projects || []; const cells=summary.entries.map((entry,idx)=>`<td class="week-cell ${classifyCell(entry)}" title="${p.nombre}
+${weeks[idx].iso}
+Asignado: ${entry.assigned.toFixed(1)} FTE
+Libre: ${entry.free.toFixed(1)} FTE">${entry.assigned.toFixed(1)}<div class="small">L ${entry.free.toFixed(1)}</div></td>`).join(''); return `<tr><td class="person"><strong>${p.nombre}</strong></td><td class="person2"><span class="tag">${p.rol||'—'}</span></td><td class="person3"><span class="small">${nowProjects.join(', ') || (Number(p.fte||0)>0 ? 'Sin proyecto' : 'No disponible')}</span></td>${cells}</tr>`; }).join(''); document.getElementById('timelineTable').innerHTML=`<thead><tr><th class="person header-sticky">Persona</th><th class="person2 header-sticky">Rol</th><th class="person3 header-sticky">Carga actual</th>${headWeeks}</tr></thead><tbody>${body || `<tr><td colspan="${3+weeks.length}">Sin datos</td></tr>`}</tbody>`; const rows=persons.map(p=>{ const s=personSummary(p,weeks); if(s.firstFree===-1) return {p,week:'—',free:0,sort:999}; return {p,week:s.firstFree===0?'Ahora':weeks[s.firstFree].iso,free:s.entries[s.firstFree].free,sort:s.firstFree}; }).sort((a,b)=>a.sort-b.sort || a.p.nombre.localeCompare(b.p.nombre)); document.getElementById('releaseTable').innerHTML=rows.map(r=>`<tr><td><strong>${r.p.nombre}</strong></td><td>${r.p.rol||'—'}</td><td>${r.week}</td><td class="${r.free>=0.5?'good':(r.free>0?'warn':'')}">${r.free ? r.free.toFixed(1)+' FTE' : '—'}</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>'; const byRole={}; persons.forEach(p=>{ const role=p.rol||'Sin rol'; if(!byRole[role]) byRole[role]={capacity:0, freeNow:0, releaseSoon:0}; const s=personSummary(p,weeks), fte=Number(p.fte||0); byRole[role].capacity+=fte; byRole[role].freeNow+=s.now.free||0; if(s.firstFree>0 && s.firstFree<=3) byRole[role].releaseSoon+=1; }); document.getElementById('roleTable').innerHTML=Object.entries(byRole).sort((a,b)=>b[1].capacity-a[1].capacity).map(([role,data])=>`<tr><td><strong>${role}</strong></td><td>${data.capacity.toFixed(1)} FTE</td><td>${data.freeNow.toFixed(1)} FTE</td><td>${data.releaseSoon}</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>'; }
+function renderDemanda(){ const rows=filteredDemand(), weeks=[...new Set(rows.map(r=>r.semana))].sort(); const totalDemand=rows.reduce((s,d)=>s+Number(d.demanda_fte||0),0); const pipelineDemand=rows.filter(d=>d.proyecto_estado==='Pipeline').reduce((s,d)=>s+Number(d.demanda_fte||0),0); const activeDemand=rows.filter(d=>d.proyecto_estado==='Activo').reduce((s,d)=>s+Number(d.demanda_fte||0),0); const assignedRole=assignedApproxByRoleCurrent(); const demandRole={}; rows.forEach(d=>{ const role=d.rol||'Sin rol'; demandRole[role]=(demandRole[role]||0)+Number(d.demanda_fte||0); }); const allRoles=[...new Set([...Object.keys(assignedRole),...Object.keys(demandRole)])].sort(); const gapRows=allRoles.map(role=>({role,demand:Number(demandRole[role]||0),assigned:Number(assignedRole[role]||0),gap:Number(demandRole[role]||0)-Number(assignedRole[role]||0)})).sort((a,b)=>b.gap-a.gap); document.getElementById('demandaKpis').innerHTML=`<div class="kpi"><div class="label">Demanda filtrada</div><div class="value warn">${totalDemand.toFixed(1)} FTE</div><div class="subv">${weeks.length} semana(s) · ${rows.length} líneas</div></div><div class="kpi"><div class="label">Demanda activa</div><div class="value">${activeDemand.toFixed(1)} FTE</div><div class="subv">Proyectos activos</div></div><div class="kpi"><div class="label">Demanda pipeline</div><div class="value">${pipelineDemand.toFixed(1)} FTE</div><div class="subv">Oportunidades / pipeline</div></div><div class="kpi"><div class="label">Roles con gap</div><div class="value bad">${gapRows.filter(r=>r.gap>0).length}</div><div class="subv">Con déficit de cobertura</div></div>`; makeChart('demandaRolChart','doughnut',{labels:allRoles,datasets:[{label:'Demanda',data:allRoles.map(r=>demandRole[r]||0)}]}); makeChart('gapRolChart','bar',{labels:gapRows.map(r=>r.role),datasets:[{label:'Demanda',data:gapRows.map(r=>r.demand)},{label:'Asignado aprox.',data:gapRows.map(r=>r.assigned)},{label:'Gap',data:gapRows.map(r=>r.gap)}]}); const byProject={}; rows.forEach(d=>{ const key=d.proyecto||'Sin proyecto'; if(!byProject[key]) byProject[key]={estado:d.proyecto_estado||'—',demanda:0,semanas:new Set()}; byProject[key].demanda+=Number(d.demanda_fte||0); if(d.semana) byProject[key].semanas.add(d.semana); }); document.getElementById('demandaProyectoTable').innerHTML=Object.entries(byProject).map(([proyecto,v])=>({proyecto,estado:v.estado,demanda:v.demanda,semanas:[...v.semanas].sort()})).sort((a,b)=>b.demanda-a.demanda).slice(0,20).map(r=>`<tr><td><strong>${r.proyecto}</strong></td><td>${r.estado}</td><td>${r.semanas.slice(0,3).join(', ')}${r.semanas.length>3?'…':''}</td><td>${r.demanda.toFixed(1)} FTE</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>'; document.getElementById('gapRolTable').innerHTML=gapRows.slice(0,20).map(r=>`<tr><td><strong>${r.role}</strong></td><td>${r.demand.toFixed(1)} FTE</td><td>${r.assigned.toFixed(1)} FTE</td><td class="${r.gap>0?'bad':'good'}">${r.gap.toFixed(1)} FTE</td></tr>`).join('') || '<tr><td colspan="4">Sin datos</td></tr>'; }
+function makeChart(canvasId,type,data){ const ctx=document.getElementById(canvasId); if(!ctx) return; if(charts[canvasId]) charts[canvasId].destroy(); charts[canvasId]=new Chart(ctx,{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#c8cedd'}}},scales:type==='doughnut'?{}:{x:{ticks:{color:'#8d95ac'},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#8d95ac'},grid:{color:'rgba(255,255,255,.05)'},beginAtZero:true}}}}); }
+function activateTab(name){ document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name)); document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===`tab-${name}`)); }
+function renderAll(){ renderSummary(); renderLiberacion(); renderDemanda(); }
+async function bootstrap(){ const session=await ensureSession(); if(!session){ document.getElementById('loginView').style.display='flex'; document.getElementById('app').style.display='none'; return; } document.getElementById('loginView').style.display='none'; document.getElementById('app').style.display='block'; document.getElementById('userBadge').textContent=session.user.email; await loadData(); renderAll(); }
+document.getElementById('loginBtn').addEventListener('click', async ()=>{ const email=document.getElementById('loginEmail').value.trim(), password=document.getElementById('loginPassword').value; if(!email||!password){ showError('Email y contraseña son obligatorios'); return; } const ok=await login(email,password); if(ok) await bootstrap(); });
+document.getElementById('logoutBtn').addEventListener('click', logout);
+document.getElementById('refreshBtn').addEventListener('click', async ()=>{ await loadData(); renderAll(); toast('Recargado'); });
+['weeksSelect','roleFilter','availabilityFilter'].forEach(id=>document.getElementById(id).addEventListener('change', renderLiberacion));
+document.getElementById('searchPerson').addEventListener('input', renderLiberacion);
+['demandHorizon','demandProjectState'].forEach(id=>document.getElementById(id).addEventListener('change', renderDemanda));
+document.getElementById('demandSearch').addEventListener('input', renderDemanda);
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click', ()=>activateTab(btn.dataset.tab)));
+window.addEventListener('load', bootstrap);
+</script>
+</body>
+</html>
